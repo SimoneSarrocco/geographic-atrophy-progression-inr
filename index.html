@@ -1,0 +1,617 @@
+Index · HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>GAP-INR: Forecasting Geographic Atrophy with Implicit Neural Representations</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+ 
+  <!-- FontAwesome & Academicons -->
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+ 
+  <!-- Fonts and Bulma -->
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+ 
+  <style>
+    body{ font-family: 'Noto Sans', sans-serif; }
+    .title, .publication-title{ font-family: 'Google Sans', sans-serif; }
+ 
+    /* Method / eye selector pills, matching the comparison viewer pattern */
+    .method-selector{
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 1.5rem;
+    }
+    .method-pill{
+      background-color: #f5f5f5;
+      border: 1px solid #dbdbdb;
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #4a4a4a;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .method-pill:hover{
+      background-color: #eeeeee;
+      border-color: #b5b5b5;
+    }
+    .method-pill.is-active{
+      background-color: #3273dc;
+      border-color: #3273dc;
+      color: #fff;
+      box-shadow: 0 2px 4px rgba(50, 115, 220, 0.3);
+    }
+    .method-pill.is-active.is-muted{
+      background-color: #7a7a7a;
+      border-color: #7a7a7a;
+    }
+ 
+    .framed-image{
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      border: 1px solid #ececec;
+    }
+ 
+    /* Graceful placeholder for figures not yet dropped in */
+    .img-slot{ position: relative; }
+    .img-slot.img-missing img{ display:none; }
+    .img-slot.img-missing{
+      min-height: 220px;
+      border: 1px dashed #c9c9c9;
+      border-radius: 8px;
+      background: #fafafa;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .img-slot.img-missing::after{
+      content: attr(data-placeholder);
+      font-family: monospace;
+      font-size: 12.5px;
+      color: #9a9a9a;
+      text-align: center;
+      padding: 0 24px;
+      white-space: pre-line;
+    }
+ 
+    /* Status legend chips, colours match the paper's own figure convention */
+    .status-legend{
+      display: flex; flex-wrap: wrap; gap: 18px; justify-content: center;
+      font-size: 0.85rem; color: #4a4a4a; margin-bottom: 1rem;
+    }
+    .status-legend .dot{ width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+ 
+    /* Interactive trajectory viewer */
+    .viewer-box{
+      background: #fff;
+      border: 1px solid #ececec;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+      padding: 28px;
+    }
+    .viewer-canvas{
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+      background: #111;
+    }
+    .canvas-caption{
+      text-align: center; font-size: 0.85rem; color: #6a6a6a; margin-top: 8px;
+    }
+    .readout-table{ width: 100%; font-size: 0.92rem; }
+    .readout-table td{ padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
+    .readout-table td.k{ color: #7a7a7a; }
+    .readout-table td.v{ text-align: right; font-weight: 600; color: #222; }
+    .status-pill{
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 0.85rem; font-weight: 600; padding: 5px 14px; border-radius: 20px;
+      border: 1px solid #ddd; background: #f7f7f7; margin-bottom: 14px;
+    }
+    .status-pill .dot{ width: 8px; height: 8px; border-radius: 50%; }
+    .metric-note{ font-size: 0.82rem; color: #9a9a9a; font-style: italic; margin-top: 10px; }
+ 
+    .timeline-wrap{ margin-top: 26px; }
+    .timeline-track-outer{ position: relative; height: 54px; }
+    .timeline-line{ position: absolute; top: 26px; left: 0; right: 0; height: 2px; background: #e2e2e2; }
+    .timeline-marker{
+      position: absolute; top: 20px; width: 13px; height: 13px; border-radius: 50%;
+      border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
+      transform: translateX(-50%); cursor: pointer;
+    }
+    .timeline-marker .tt{
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      font-size: 11px; color: #7a7a7a; white-space: nowrap;
+    }
+    input[type=range].scrubber{
+      position: absolute; top: 12px; left: 0; width: 100%; height: 16px; margin: 0;
+    }
+    .viewer-footnote{ font-size: 0.8rem; color: #a5a5a5; margin-top: 18px; text-align: center; }
+ 
+    .callout-box{
+      border-left: 3px solid #f1a13a;
+      background: #fff8ee;
+      border-radius: 0 8px 8px 0;
+      padding: 16px 20px;
+      font-size: 0.95rem;
+      color: #4a4a4a;
+      margin-top: 20px;
+    }
+    .callout-box b{ color: #b06a12; }
+  </style>
+</head>
+ 
+<body>
+ 
+  <section class="hero">
+    <div class="hero-body">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+            <h1 class="title is-1 publication-title">GAP-INR: Forecasting Geographic Atrophy with Implicit Neural Representations</h1>
+            <div class="is-size-5 publication-authors">
+              <span class="author-block">
+                <a href="#">Author One</a><sup>1,2</sup>,
+              </span>
+              <span class="author-block">
+                <a href="#">Author Two</a><sup>1</sup>,
+              </span>
+              <span class="author-block">
+                <a href="#">Author Three</a><sup>1</sup>,
+              </span>
+              <span class="author-block">
+                <a href="#">Author Four</a><sup>2</sup>,
+              </span>
+              <span class="author-block">
+                <a href="#">Senior Author</a><sup>1</sup>
+              </span>
+            </div>
+ 
+            <div class="is-size-5 publication-authors">
+              <span class="author-block"><sup>1</sup>Your Department / Institution,</span>
+              <span class="author-block"><sup>2</sup>Clinical Partner Institution</span>
+            </div>
+ 
+            <div class="container has-text-centered mt-4">
+              <div class="buttons is-centered">
+ 
+                <a href="" class="button is-dark is-rounded" target="_blank">
+                  <span class="icon"><i class="ai ai-arxiv"></i></span>
+                  <span>ArXiv</span>
+                </a>
+ 
+                <a href="#" class="button is-dark is-rounded" target="_blank">
+                  <span class="icon"><i class="fab fa-github"></i></span>
+                  <span>Code</span>
+                </a>
+ 
+                <a href="#" class="external-link button is-normal is-rounded is-dark" title="Restricted-access clinical dataset">
+                  <span class="icon"><i class="far fa-images"></i></span>
+                  <span>Data (restricted)</span>
+                </a>
+ 
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+ 
+  <!-- Figure 2: baseline comparison, method-pill switcher -->
+  <section class="section">
+    <div class="container">
+      <h2 class="title is-4 has-text-centered">
+        Held-Out Reconstruction: Comparison Viewer
+      </h2>
+      <p class="has-text-centered subtitle is-size-6 mb-4" style="color: #666;">
+        Predicted FAF image and GA segmentation for one held-out visit, compared across methods.
+        Copy-forward simply repeats the last available visit.
+      </p>
+ 
+      <div class="method-selector">
+        <button class="method-pill is-active" data-method="ours">GAP-INR (Ours)</button>
+        <button class="method-pill" data-method="imageflownet">ImageFlowNet</button>
+        <button class="method-pill" data-method="i2sbunet">I2SB-UNet</button>
+        <button class="method-pill" data-method="tunet">T-UNet</button>
+        <button class="method-pill is-muted" data-method="copyforward">Copy-forward</button>
+      </div>
+ 
+      <div class="columns is-centered">
+        <div class="column is-half has-text-centered">
+          <div class="img-slot" id="fig2faf" data-placeholder="figure2_&lt;method&gt;_faf.png">
+            <img class="framed-image" src="./images/figure2_ours_faf.png" alt="Predicted FAF image">
+          </div>
+          <p class="is-size-6 mt-2" style="color:#7a7a7a;">Predicted FAF</p>
+        </div>
+        <div class="column is-half has-text-centered">
+          <div class="img-slot" id="fig2seg" data-placeholder="figure2_&lt;method&gt;_seg.png">
+            <img class="framed-image" src="./images/figure2_ours_seg.png" alt="Predicted GA segmentation">
+          </div>
+          <p class="is-size-6 mt-2" style="color:#7a7a7a;">Predicted GA segmentation</p>
+        </div>
+      </div>
+    </div>
+  </section>
+ 
+  <section class="section">
+    <div class="container is-max-desktop">
+      <!-- Abstract -->
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-four-fifths">
+          <h2 class="title is-3">Abstract</h2>
+          <div class="content has-text-justified">
+            <p>
+              Geographic atrophy (GA) in age-related macular degeneration expands irreversibly over months to
+              years, and its future extent is what clinicians need to plan monitoring and treatment. We introduce
+              <strong>GAP-INR</strong>, a conditional implicit neural representation that treats each patient-eye's
+              longitudinal fundus autofluorescence (FAF) imaging and GA segmentation as samples of one continuous
+              field.
+              <br><br>
+              A single SIREN decoder is shared across the entire cohort and modulated per eye by a learned latent
+              code, and per visit by a temporal condition, applied through FiLM. From a query coordinate, the
+              decoder jointly predicts FAF intensity and GA class probability. At test time the decoder is frozen
+              and only a new eye's latent is fit to its observed visits (up to four); advancing the temporal
+              condition beyond the last visit then forecasts a scan that was never acquired.
+              <br><br>
+              Against ImageFlowNet and its reported baselines (I2SB-UNet, T-UNet), and against a naive
+              copy-forward control, GAP-INR reconstructs held-out visits more accurately and produces lesion-area
+              trajectories that track each eye's individual growth curve — including under genuine extrapolation
+              — more faithfully than population-level curve fits such as linear or cubic B-spline interpolation.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+ 
+  <!-- Figure 1: architecture -->
+  <section class="section">
+    <div class="container has-text-centered">
+      <h2 class="title is-4">Overview of the GAP-INR architecture</h2>
+ 
+      <div class="img-slot" data-placeholder="figure1_architecture.png">
+        <img class="framed-image" src="./images/figure1_architecture.png" alt="GAP-INR architecture overview">
+      </div>
+ 
+      <p class="is-size-5 mt-3">
+        A single SIREN decoder is shared across every patient-eye in the dataset, modulated by two signals:<br>
+        <strong>(a) Training:</strong> subject <i>i</i>'s visits (t<sub>1</sub>…t<sub>4</sub>) supervise the
+        shared decoder, FiLM-modulated by the eye's latent code z<sub>i</sub>, the temporal condition
+        <i>t</i>, and age at visit. Reconstruction (f<sub>θ</sub><sup>faf</sup>) and segmentation
+        (f<sub>θ</sub><sup>seg</sup>) heads read out from the shared trunk.<br>
+        <strong>(b) Test-time optimisation:</strong> for a new subject <i>k</i>, the decoder is frozen and only
+        the latent z<sub>k</sub> is fit on the available visits (t<sub>1</sub>…t<sub>3</sub>) by backpropagating
+        the reconstruction and segmentation loss into the latent alone. Querying t<sub>4</sub> then predicts a
+        visit that was never acquired.
+      </p>
+ 
+    </div>
+  </section>
+ 
+  <!-- Figure 3: interactive trajectory viewer -->
+  <section class="section">
+    <div class="container is-max-desktop">
+      <h2 class="title is-4 has-text-centered">
+        Explore a Patient Trajectory
+      </h2>
+      <p class="has-text-centered subtitle is-size-6 mb-4" style="color: #666;">
+        Drag the playhead across an eye's timeline. Filled markers are real visits GAP-INR was fit on; the gold
+        marker was held out entirely. Between and beyond real visits, the field is queried at timestamps that
+        were never acquired.
+      </p>
+ 
+      <div class="method-selector" id="eyeSelect">
+        <button class="method-pill is-active" data-eye="0">Eye A — 4 visits</button>
+        <button class="method-pill" data-eye="1">Eye B — 3 visits</button>
+        <button class="method-pill" data-eye="2">Eye C — 4 visits, fast growth</button>
+      </div>
+ 
+      <div class="status-legend">
+        <span><span class="dot" style="background:#1976D2"></span>Observed</span>
+        <span><span class="dot" style="background:#c8951a"></span>Held-out</span>
+        <span><span class="dot" style="background:#26A69A"></span>Interpolated</span>
+        <span><span class="dot" style="background:#AB47BC"></span>Extrapolated</span>
+      </div>
+ 
+      <div class="viewer-box">
+        <div class="columns is-vcentered">
+          <div class="column is-4 has-text-centered">
+            <canvas id="cvFaf" class="viewer-canvas" width="320" height="320"></canvas>
+            <div class="canvas-caption">Fundus autofluorescence</div>
+          </div>
+          <div class="column is-4 has-text-centered">
+            <canvas id="cvSeg" class="viewer-canvas" width="320" height="320"></canvas>
+            <div class="canvas-caption">GA segmentation</div>
+          </div>
+          <div class="column is-4">
+            <div class="status-pill" id="statusBadge"><span class="dot"></span><span id="statusText">Observed</span></div>
+            <table class="readout-table">
+              <tr><td class="k">Week</td><td class="v" id="mWeek">0.0</td></tr>
+              <tr><td class="k">PSNR</td><td class="v" id="mPsnr">—</td></tr>
+              <tr><td class="k">SSIM</td><td class="v" id="mSsim">—</td></tr>
+              <tr><td class="k">Predicted area</td><td class="v" id="mPredArea">—</td></tr>
+              <tr><td class="k">GT area</td><td class="v" id="mGtArea">—</td></tr>
+            </table>
+            <div class="metric-note" id="mNote">Reconstruction of an observed visit — ground truth available.</div>
+          </div>
+        </div>
+ 
+        <div class="timeline-wrap">
+          <div class="timeline-track-outer" id="timelineAxis">
+            <div class="timeline-line"></div>
+            <input type="range" class="scrubber" id="scrubber" min="0" max="60" step="0.25" value="0">
+          </div>
+        </div>
+      </div>
+      <p class="viewer-footnote">Synthetic demo data illustrating the interaction model — wire in real per-visit
+        predictions and metrics via the <code>EYES</code> array in the page script.</p>
+    </div>
+  </section>
+ 
+  <!-- Figure 4: per-eye trajectories -->
+  <section class="section">
+    <div class="container">
+      <h2 class="title is-4 has-text-centered">Per-Eye Lesion Area Trajectories</h2>
+ 
+      <div class="columns is-centered">
+        <div class="column is-five-sixths">
+          <div class="img-slot" data-placeholder="figure4_trajectories_grid.png&#10;&#10;small-multiples grid, one panel per test eye">
+            <img class="framed-image" src="./images/figure4_trajectories_grid.png" alt="Grid of per-eye lesion area scatter plots">
+          </div>
+        </div>
+      </div>
+ 
+      <div class="columns is-centered mt-3">
+        <div class="column is-four-fifths">
+          <p class="is-size-5 has-text-centered">
+            One scatter panel per test eye: ground-truth lesion area at each real visit against GAP-INR's
+            predicted trajectory, alongside copy-forward, linear interpolation/extrapolation, and cubic
+            B-spline fits.
+          </p>
+        </div>
+      </div>
+ 
+      <div class="columns is-centered">
+        <div class="column is-four-fifths">
+          <div class="callout-box">
+            <b>Why monotonicity matters.</b> GA is anatomically irreversible — once tissue atrophies, the lesion
+            does not shrink. Curve fits like linear or cubic B-spline have no mechanism to enforce this and can
+            predict area decreasing between visits; a faithful model's predicted trajectory should stay
+            non-decreasing along each eye's own timeline, not just accurate at the sampled points.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+ 
+  <!-- Figure 5: ablation -->
+  <section class="section">
+    <div class="container has-text-centered">
+      <h2 class="title is-4">Latent Capacity Ablation</h2>
+      <p class="is-size-6 mb-4" style="color:#666;">
+        Channel count and spatial grid size of the per-eye latent, swept jointly.
+      </p>
+ 
+      <div class="img-slot" data-placeholder="figure5_ablation_heatmap.png&#10;&#10;heatmap: channel count × latent grid size">
+        <img class="framed-image" src="./images/figure5_ablation_heatmap.png" alt="Heatmap of held-out performance across latent channel count and spatial grid size">
+      </div>
+ 
+      <p class="is-size-5 mt-3">
+        The per-eye latent is a grid of shape (channels, H, W). Too coarse and the shared decoder cannot carry
+        enough per-eye detail; too large and the latent risks memorising rather than generalising across visits.
+        The heatmap reports held-out performance across the sweep of channel count (rows) and spatial grid size
+        (columns); see the paper for exact values and the metric definition used.
+      </p>
+    </div>
+  </section>
+ 
+  <section class="section" id="BibTeX">
+    <div class="container is-max-desktop content">
+      <h2 class="title">BibTeX</h2>
+      <pre><code>@article{gapinr2026,
+      title   = {GAP-INR: Forecasting Geographic Atrophy with Implicit Neural Representations},
+      author  = {},
+      journal = {},
+      year    = {2026}
+}
+      </code></pre>
+    </div>
+  </section>
+ 
+  <footer class="footer">
+    <div class="container has-text-centered">
+      <p class="is-size-7" style="color:#9a9a9a;">
+        Builds on the CINeMA framework (Dannecker et al., 2026). Released under Apache-2.0, see repository for details.
+      </p>
+    </div>
+  </footer>
+ 
+<script>
+/* ===================================================================
+   Demo data model. Replace with real per-eye visits / predictions.
+   Colours follow the paper's own status convention:
+   observed = blue, held-out = gold, interpolated = teal, extrapolated = purple
+   =================================================================== */
+const STATUS_COLOR = { actual:'#1976D2', holdout:'#c8951a', interpolated:'#26A69A', extrapolated:'#AB47BC' };
+const STATUS_LABEL = {
+  actual:'Observed visit', holdout:'Held-out visit',
+  interpolated:'Interpolated', extrapolated:'Extrapolated (forecast)'
+};
+ 
+const EYES = [
+  { name:'Eye A', base:0.85, rate:0.0032, power:1.32, seed:[0.4,2.1],
+    visits:[
+      {week:0,  status:'actual',  psnr:37.1, ssim:0.961, noise: 0.02},
+      {week:16, status:'actual',  psnr:36.0, ssim:0.952, noise:-0.03},
+      {week:33, status:'holdout', psnr:34.2, ssim:0.928, noise: 0.015},
+      {week:44, status:'actual',  psnr:35.4, ssim:0.944, noise:-0.01},
+    ]},
+  { name:'Eye B', base:1.4, rate:0.0021, power:1.45, seed:[1.7,0.6],
+    visits:[
+      {week:0,  status:'actual',  psnr:36.4, ssim:0.955, noise: 0.01},
+      {week:20, status:'actual',  psnr:35.7, ssim:0.949, noise: 0.02},
+      {week:41, status:'holdout', psnr:33.5, ssim:0.919, noise:-0.02},
+    ]},
+  { name:'Eye C', base:0.6, rate:0.0058, power:1.28, seed:[2.9,1.1],
+    visits:[
+      {week:0,  status:'actual',  psnr:35.9, ssim:0.947, noise:-0.02},
+      {week:12, status:'actual',  psnr:35.1, ssim:0.941, noise: 0.02},
+      {week:24, status:'holdout', psnr:32.8, ssim:0.912, noise: 0.03},
+      {week:34, status:'actual',  psnr:34.6, ssim:0.935, noise:-0.015},
+    ]},
+];
+ 
+function predictedArea(eye, w){ return eye.base + eye.rate * Math.pow(Math.max(w,0), eye.power); }
+function gtAreaAtVisit(eye, visit){ return predictedArea(eye, visit.week) * (1 + visit.noise); }
+function statusAt(eye, w){
+  const vs = eye.visits;
+  for(const v of vs){ if(Math.abs(v.week - w) < 0.3) return v; }
+  if(w <= vs[0].week) return {week:w, status:'actual', synthetic:true};
+  if(w >= vs[vs.length-1].week) return {week:w, status:'extrapolated', synthetic:true};
+  return {week:w, status:'interpolated', synthetic:true};
+}
+function axisMax(eye){ return eye.visits[eye.visits.length-1].week + 24; }
+ 
+function blobPath(ctx, cx, cy, r, seed){
+  ctx.beginPath();
+  const N = 64;
+  for(let i=0;i<=N;i++){
+    const a = (i/N) * Math.PI*2;
+    const rr = r * (1 + 0.14*Math.sin(3*a+seed[0]) + 0.07*Math.sin(5*a+seed[1]));
+    const x = cx + rr*Math.cos(a), y = cy + rr*Math.sin(a);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.closePath();
+}
+ 
+function drawFaf(ctx, size, areaMm2, seed){
+  ctx.clearRect(0,0,size,size);
+  const cx=size/2, cy=size/2;
+  const g = ctx.createRadialGradient(cx,cy,4,cx,cy,size*0.62);
+  g.addColorStop(0,'#3c4a3f'); g.addColorStop(0.55,'#26332a'); g.addColorStop(1,'#0c1210');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,size*0.48,0,Math.PI*2); ctx.fill();
+ 
+  ctx.strokeStyle='rgba(140,170,150,0.18)'; ctx.lineWidth=1.4;
+  for(let i=0;i<5;i++){
+    ctx.beginPath();
+    const a0 = i*1.3, r0 = size*0.2 + i*7;
+    ctx.arc(cx, cy, r0, a0, a0+2.2);
+    ctx.stroke();
+  }
+ 
+  const r = Math.sqrt(areaMm2/Math.PI) * (size*0.052);
+  ctx.save();
+  blobPath(ctx, cx, cy, r*1.32, seed);
+  ctx.strokeStyle='rgba(214,232,150,0.55)'; ctx.lineWidth=3; ctx.stroke();
+  ctx.restore();
+  blobPath(ctx, cx, cy, r, seed);
+  ctx.fillStyle='#0a0e0b'; ctx.fill();
+}
+ 
+function drawSeg(ctx, size, areaMm2, seed){
+  ctx.clearRect(0,0,size,size);
+  ctx.fillStyle='#05070a'; ctx.fillRect(0,0,size,size);
+  const cx=size/2, cy=size/2;
+  const r = Math.sqrt(areaMm2/Math.PI) * (size*0.052);
+  blobPath(ctx, cx, cy, r, seed);
+  ctx.fillStyle='#f4f4f4'; ctx.fill();
+}
+ 
+let currentEye = EYES[0];
+const cvFaf = document.getElementById('cvFaf'), ctxFaf = cvFaf.getContext('2d');
+const cvSeg = document.getElementById('cvSeg'), ctxSeg = cvSeg.getContext('2d');
+const scrubber = document.getElementById('scrubber');
+const axis = document.getElementById('timelineAxis');
+ 
+function render(){
+  const w = parseFloat(scrubber.value);
+  const info = statusAt(currentEye, w);
+  const pred = predictedArea(currentEye, w);
+ 
+  drawFaf(ctxFaf, cvFaf.width, pred, currentEye.seed);
+  drawSeg(ctxSeg, cvSeg.width, pred, currentEye.seed);
+ 
+  const badge = document.getElementById('statusBadge');
+  badge.querySelector('.dot').style.background = STATUS_COLOR[info.status];
+  document.getElementById('statusText').textContent = STATUS_LABEL[info.status];
+  document.getElementById('mWeek').textContent = w.toFixed(1) + ' w';
+  document.getElementById('mPredArea').textContent = pred.toFixed(2) + ' mm²';
+ 
+  if(info.status === 'actual' || info.status === 'holdout'){
+    const visit = currentEye.visits.find(v => Math.abs(v.week-w) < 0.3);
+    if(visit){
+      document.getElementById('mPsnr').textContent = visit.psnr.toFixed(1) + ' dB';
+      document.getElementById('mSsim').textContent = visit.ssim.toFixed(3);
+      document.getElementById('mGtArea').textContent = gtAreaAtVisit(currentEye, visit).toFixed(2) + ' mm²';
+      document.getElementById('mNote').textContent = info.status === 'holdout'
+        ? 'Held out from latent fitting entirely — prediction shown is a true generalisation test.'
+        : 'Reconstruction of an observed visit — ground truth available.';
+      return;
+    }
+  }
+  document.getElementById('mPsnr').textContent = '—';
+  document.getElementById('mSsim').textContent = '—';
+  document.getElementById('mGtArea').textContent = 'n/a';
+  document.getElementById('mNote').textContent = info.status === 'extrapolated'
+    ? 'Beyond the last observed visit — a genuine forecast, no ground truth exists.'
+    : 'Between two observed visits — no acquisition exists at this timepoint.';
+}
+ 
+function buildTimeline(){
+  document.querySelectorAll('.timeline-marker').forEach(m => m.remove());
+  const max = axisMax(currentEye);
+  scrubber.max = max;
+  scrubber.value = currentEye.visits[0].week;
+  currentEye.visits.forEach(v => {
+    const pct = (v.week / max) * 100;
+    const m = document.createElement('div');
+    m.className = 'timeline-marker';
+    m.style.left = pct + '%';
+    m.style.background = STATUS_COLOR[v.status];
+    m.innerHTML = `<span class="tt">${v.week}w</span>`;
+    m.addEventListener('click', () => { scrubber.value = v.week; render(); });
+    axis.appendChild(m);
+  });
+  render();
+}
+ 
+scrubber.addEventListener('input', render);
+ 
+document.getElementById('eyeSelect').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.method-pill'); if(!btn) return;
+  document.querySelectorAll('#eyeSelect .method-pill').forEach(p=>p.classList.remove('is-active'));
+  btn.classList.add('is-active');
+  currentEye = EYES[parseInt(btn.dataset.eye,10)];
+  buildTimeline();
+});
+ 
+buildTimeline();
+ 
+/* Figure 2 pill switcher */
+document.querySelectorAll('.method-selector').forEach(sel=>{
+  if(sel.id === 'eyeSelect') return;
+  sel.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.method-pill'); if(!btn) return;
+    sel.querySelectorAll('.method-pill').forEach(p=>p.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    const m = btn.dataset.method;
+    document.querySelector('#fig2faf img').src = `./images/figure2_${m}_faf.png`;
+    document.querySelector('#fig2seg img').src = `./images/figure2_${m}_seg.png`;
+  });
+});
+ 
+/* Missing-image graceful fallback */
+document.querySelectorAll('.img-slot img').forEach(img=>{
+  img.addEventListener('error', function(){ this.closest('.img-slot').classList.add('img-missing'); });
+  img.addEventListener('load', function(){ this.closest('.img-slot').classList.remove('img-missing'); });
+});
+</script>
+ 
+</body>
+</html>
