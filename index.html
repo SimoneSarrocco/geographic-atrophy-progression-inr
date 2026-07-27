@@ -13,6 +13,9 @@
   <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
 
+  <!-- Latex -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
   <style>
     body{ font-family: 'Noto Sans', sans-serif; }
     .title, .publication-title{ font-family: 'Google Sans', sans-serif; }
@@ -408,10 +411,10 @@
       </div>
 
       <p class="is-size-5 mt-3">
-        Our proposed model architecture. In the training phase (a), a spatial coordinate $\mathbf{x}\in\mathbb{R}^2$ 
-        is fed into the MLP. Each layer of the MLP is conditioned by concatenating the latent vector $z_i$ and the time variables 
-        via modulation. The INR outputs both the pixel intensity value $\hat{I}_i(\mathbf{x})$ and the GA segmentation label $\hat{S}_i(\mathbf{x})$. 
-        During test-time optimisation (b), a new latent vector $z_k$ is used for a new eye $k$ and optimised across both FAF images 
+        Our proposed model architecture. In the training phase (a), a spatial coordinate <span class="tex">\mathbf{x}\in\mathbb{R}^2</span> 
+        is fed into the MLP. Each layer of the MLP is conditioned by concatenating the latent vector <span class="tex">z_i</span> and the time variables 
+        via modulation. The INR outputs both the pixel intensity value <span class="tex">\hat{I}_i(\mathbf{x})</span> and the GA segmentation label <span class="tex">\hat{S}_i(\mathbf{x})</span>. 
+        During test-time optimisation (b), a new latent vector <span class="tex">z_k</span> is used for a new eye <span class="tex">k</span> and optimised across both FAF images 
         and GA segmentations, while keeping the INR parameters frozen. By concatenating the new optimised latent vector 
         with the time-conditioning variables, the forward pass generates the new FAF image and GA segmentation at the specified time.
       </p>
