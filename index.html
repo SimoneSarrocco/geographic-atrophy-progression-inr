@@ -416,35 +416,25 @@
   <section class="section">
     <div class="container has-text-centered">
       <h2 class="title is-4">Overview of the GAP-INR architecture</h2>
-
+  
       <div class="img-slot" data-placeholder="Figure1.png">
         <img class="framed-image" src="./images/Figure1.png" alt="GAP-INR architecture overview">
       </div>
       
       <p class="is-size-5 mt-3">
         Our proposed model architecture. In the training phase (a), a spatial coordinate 
-        <span id="eq1"></span>
+        \(\mathbf{x}\in\mathbb{R}^2\)
         is fed into the MLP. Each layer of the MLP is conditioned by concatenating the latent vector 
-        <span id="eq2"></span> and the time variables 
+        \(z_i\) and the time variables 
         via modulation. The INR outputs both the pixel intensity value 
-        <span id="eq3"></span> and the GA segmentation label 
-        <span id="eq4"></span>. 
+        \(\hat{I}_i(\mathbf{x})\) and the GA segmentation label 
+        \(\hat{S}_i(\mathbf{x})\). 
         During test-time optimisation (b), a new latent vector 
-        <span id="eq5"></span> is used for a new eye 
-        <span id="eq6"></span> and optimised across both FAF images 
+        \(z_k\) is used for a new eye 
+        \(k\) and optimised across both FAF images 
         and GA segmentations, while keeping the INR parameters frozen. By concatenating the new optimised latent vector 
         with the time-conditioning variables, the forward pass generates the new FAF image and GA segmentation at the specified time.
       </p>
-
-      <script>
-        katex.render("\\(\\mathbf{x}\\in\\mathbb{R}^2\\)", document.getElementById("eq1"));
-        katex.render("\\(z_i\\)", document.getElementById("eq2"));
-        katex.render("\\(\\hat{I}_i(\\mathbf{x})\\)", document.getElementById("eq3"));
-        katex.render("\\(\\hat{S}_i(\\mathbf{x})\\)", document.getElementById("eq4"));
-        katex.render("\\(z_k\\)", document.getElementById("eq5"));
-        katex.render("\\(k\\)", document.getElementById("eq6"));
-      </script>
-
     </div>
   </section>
 
