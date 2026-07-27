@@ -380,22 +380,17 @@
           <h2 class="title is-3">Abstract</h2>
           <div class="content has-text-justified">
             <p>
-              Geographic atrophy (GA) in age-related macular degeneration expands irreversibly over months to
-              years, and its future extent is what clinicians need to plan monitoring and treatment. We introduce
-              <strong>GAP-INR</strong>, a conditional implicit neural representation that treats each patient-eye's
-              longitudinal fundus autofluorescence (FAF) imaging and GA segmentation as samples of one continuous
-              field.
-              <br><br>
-              A single SIREN decoder is shared across the entire cohort and modulated per eye by a learned latent
-              code, and per visit by a temporal condition, applied through FiLM. From a query coordinate, the
-              decoder jointly predicts FAF intensity and GA class probability. At test time the decoder is frozen
-              and only a new eye's latent is fit to its observed visits (up to four); advancing the temporal
-              condition beyond the last visit then forecasts a scan that was never acquired.
-              <br><br>
-              Against ImageFlowNet and its reported baselines (I2SB-UNet, T-UNet), and against a naive
-              copy-forward control, GAP-INR reconstructs held-out visits more accurately and produces lesion-area
-              trajectories that track each eye's individual growth curve — including under genuine extrapolation
-              — more faithfully than population-level curve fits such as linear or cubic B-spline interpolation.
+
+              Age-related macular degeneration (AMD) is the major cause of blindness in the Western world. 
+              Its late dry phase is characterised by irreversible atrophic areas, namely geographic atrophy (GA). 
+              Longitudinal Fundus Autofluorescence (FAF) image acquisitions are currently the main tool for 
+              assessing lesion growth over time at the image level. However, due to its highly individualised progression, 
+              the evolution of late AMD remains poorly understood. In this work, we propose using 
+              Implicit Neural Representations (INRs) to model GA progression at the individual level in a low-data setting. 
+              Our approach generates both FAF and GA segmentation at both past and future time points. 
+              Compared with flow-matching models, diffusion-based models, and time-aware U-Net architectures, 
+              our method achieves the best segmentation quality in different scenarios, providing the lowest mean absolute error 
+              for the GA lesion area and the best DICE score without sacrificing FAF image quality.
             </p>
           </div>
         </div>
