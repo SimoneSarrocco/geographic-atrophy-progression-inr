@@ -1,23 +1,22 @@
-Index · HTML
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <title>GAP-INR: Forecasting Geographic Atrophy with Implicit Neural Representations</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
- 
+
   <!-- FontAwesome & Academicons -->
   <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
- 
+
   <!-- Fonts and Bulma -->
   <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
- 
+
   <style>
     body{ font-family: 'Noto Sans', sans-serif; }
     .title, .publication-title{ font-family: 'Google Sans', sans-serif; }
- 
+
     /* Method / eye selector pills, matching the comparison viewer pattern */
     .method-selector{
       display: flex;
@@ -51,14 +50,14 @@ Index · HTML
       background-color: #7a7a7a;
       border-color: #7a7a7a;
     }
- 
+
     .framed-image{
       width: 100%;
       height: auto;
       border-radius: 8px;
       border: 1px solid #ececec;
     }
- 
+
     /* Graceful placeholder for figures not yet dropped in */
     .img-slot{ position: relative; }
     .img-slot.img-missing img{ display:none; }
@@ -78,14 +77,14 @@ Index · HTML
       padding: 0 24px;
       white-space: pre-line;
     }
- 
+
     /* Status legend chips, colours match the paper's own figure convention */
     .status-legend{
       display: flex; flex-wrap: wrap; gap: 18px; justify-content: center;
       font-size: 0.85rem; color: #4a4a4a; margin-bottom: 1rem;
     }
     .status-legend .dot{ width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px; }
- 
+
     /* Interactive trajectory viewer */
     .viewer-box{
       background: #fff;
@@ -115,7 +114,7 @@ Index · HTML
     }
     .status-pill .dot{ width: 8px; height: 8px; border-radius: 50%; }
     .metric-note{ font-size: 0.82rem; color: #9a9a9a; font-style: italic; margin-top: 10px; }
- 
+
     .timeline-wrap{ margin-top: 26px; }
     .timeline-track-outer{ position: relative; height: 54px; }
     .timeline-line{ position: absolute; top: 26px; left: 0; right: 0; height: 2px; background: #e2e2e2; }
@@ -132,7 +131,7 @@ Index · HTML
       position: absolute; top: 12px; left: 0; width: 100%; height: 16px; margin: 0;
     }
     .viewer-footnote{ font-size: 0.8rem; color: #a5a5a5; margin-top: 18px; text-align: center; }
- 
+
     .callout-box{
       border-left: 3px solid #f1a13a;
       background: #fff8ee;
@@ -143,11 +142,121 @@ Index · HTML
       margin-top: 20px;
     }
     .callout-box b{ color: #b06a12; }
+
+    /* -----------------------------------------------------------------
+       Compare slider (prediction vs. ground truth).
+       Everything reads from the single --reveal custom property, so one
+       JS write per animation frame updates both the clip-path (which
+       method image is showing) and the handle position in one shot —
+       both are compositor-only operations (clip-path + transform), so
+       dragging never triggers layout or paint of the full image.
+       ----------------------------------------------------------------- */
+    .compare-slider{ --reveal: 50; }
+    .compare-frame{
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      border-radius: 8px;
+      border: 1px solid #ececec;
+      background: repeating-linear-gradient(135deg, #fafafa 0 10px, #f2f2f2 10px 20px);
+      touch-action: pan-y;
+    }
+    .compare-img{
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      will-change: clip-path;
+      pointer-events: none;
+    }
+    .compare-img.compare-gt{ z-index: 1; }
+    .compare-img.compare-pred{
+      z-index: 2;
+      clip-path: inset(0 calc(100% - var(--reveal) * 1%) 0 0);
+    }
+    .compare-handle{
+      position: absolute;
+      top: 0; bottom: 0;
+      left: calc(var(--reveal) * 1%);
+      width: 2px;
+      background: #ffffff;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.12), 0 0 6px rgba(0,0,0,0.25);
+      transform: translateX(-50%);
+      z-index: 3;
+      pointer-events: none;
+      will-change: left;
+    }
+    .compare-handle-grip{
+      position: absolute; top: 50%; left: 50%;
+      width: 30px; height: 30px;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    }
+    .compare-handle-grip::before{
+      content: "⇔";
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -55%);
+      font-size: 14px; color: #3273dc;
+    }
+    .compare-tag{
+      position: absolute; top: 10px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid #e2e2e2;
+      border-radius: 12px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #4a4a4a;
+      z-index: 4;
+      pointer-events: none;
+    }
+    .compare-tag-left{ left: 10px; }
+    .compare-tag-right{ right: 10px; }
+    .compare-range{
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 30px;
+      margin: 6px 0 0;
+      background: transparent;
+      cursor: ew-resize;
+    }
+    .compare-range::-webkit-slider-runnable-track{ background: transparent; height: 30px; }
+    .compare-range::-webkit-slider-thumb{
+      -webkit-appearance: none;
+      width: 16px; height: 16px;
+      margin-top: 7px;
+      border-radius: 50%;
+      background: #3273dc;
+      border: 2px solid #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    .compare-range::-moz-range-track{ background: #e2e2e2; height: 4px; border-radius: 2px; }
+    .compare-range::-moz-range-thumb{
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #3273dc; border: 2px solid #fff;
+    }
+    .compare-slider.img-missing .compare-frame::after{
+      content: attr(data-placeholder);
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center; padding: 0 20px;
+      font-family: monospace; font-size: 11.5px; color: #9a9a9a;
+      white-space: pre-line;
+      z-index: 5;
+      background: rgba(250,250,250,0.85);
+    }
+    .mono-path{ font-family: monospace; font-size: 0.85em; color: #6a6a6a; }
   </style>
 </head>
- 
+
 <body>
- 
+
   <section class="hero">
     <div class="hero-body">
       <div class="container is-max-desktop">
@@ -184,25 +293,25 @@ Index · HTML
               <span class="author-block"><sup>3</sup>Moorfields Eye Hospital NHS Foundation Trust, London, United Kingdom</span>
               <span class="author-block"><sup>4</sup>Vienna University of Natural Resources and Life Sciences, Vienna, Austria</span>
             </div>
- 
+
             <div class="container has-text-centered mt-4">
               <div class="buttons is-centered">
- 
+
                 <a href="" class="button is-dark is-rounded" target="_blank">
                   <span class="icon"><i class="ai ai-arxiv"></i></span>
                   <span>ArXiv</span>
                 </a>
- 
+
                 <a href="#" class="button is-dark is-rounded" target="_blank">
                   <span class="icon"><i class="fab fa-github"></i></span>
                   <span>Code</span>
                 </a>
- 
+
                 <a href="#" class="external-link button is-normal is-rounded is-dark" title="Restricted-access clinical dataset">
                   <span class="icon"><i class="far fa-images"></i></span>
                   <span>Data (restricted)</span>
                 </a>
- 
+
               </div>
             </div>
           </div>
@@ -210,7 +319,7 @@ Index · HTML
       </div>
     </div>
   </section>
- 
+
   <!-- Figure 2: baseline comparison, method-pill switcher -->
   <section class="section">
     <div class="container">
@@ -221,32 +330,52 @@ Index · HTML
         Predicted FAF image and GA segmentation for one held-out visit, compared across methods.
         Copy-forward simply repeats the last available visit.
       </p>
- 
-      <div class="method-selector">
+
+      <div class="method-selector" id="fig2Methods">
         <button class="method-pill is-active" data-method="ours">GAP-INR (Ours)</button>
         <button class="method-pill" data-method="imageflownet">ImageFlowNet</button>
         <button class="method-pill" data-method="i2sbunet">I2SB-UNet</button>
         <button class="method-pill" data-method="tunet">T-UNet</button>
         <button class="method-pill is-muted" data-method="copyforward">Copy-forward</button>
       </div>
- 
+
       <div class="columns is-centered">
-        <div class="column is-half has-text-centered">
-          <div class="img-slot" id="fig2faf" data-placeholder="figure2_&lt;method&gt;_faf.png">
-            <img class="framed-image" src="./images/figure2_ours_faf.png" alt="Predicted FAF image">
+        <div class="column is-half">
+          <div class="compare-slider" id="fig2faf" data-modality="faf" style="--reveal:50;">
+            <div class="compare-frame">
+              <img class="compare-img compare-gt" src="./images/figure2_gt_faf.png" alt="Ground truth FAF image">
+              <img class="compare-img compare-pred" src="./images/figure2_ours_faf.png" alt="Predicted FAF image">
+              <div class="compare-handle" aria-hidden="true"><span class="compare-handle-grip"></span></div>
+              <span class="compare-tag compare-tag-left">Prediction</span>
+              <span class="compare-tag compare-tag-right">Ground truth</span>
+            </div>
+            <input type="range" class="compare-range" min="0" max="100" value="50"
+                   aria-label="Reveal amount between predicted and ground-truth FAF image">
           </div>
-          <p class="is-size-6 mt-2" style="color:#7a7a7a;">Predicted FAF</p>
+          <p class="is-size-6 mt-2 has-text-centered" style="color:#7a7a7a;">FAF — drag to compare</p>
         </div>
-        <div class="column is-half has-text-centered">
-          <div class="img-slot" id="fig2seg" data-placeholder="figure2_&lt;method&gt;_seg.png">
-            <img class="framed-image" src="./images/figure2_ours_seg.png" alt="Predicted GA segmentation">
+        <div class="column is-half">
+          <div class="compare-slider" id="fig2seg" data-modality="seg" style="--reveal:50;">
+            <div class="compare-frame">
+              <img class="compare-img compare-gt" src="./images/figure2_gt_seg.png" alt="Ground truth GA segmentation">
+              <img class="compare-img compare-pred" src="./images/figure2_ours_seg.png" alt="Predicted GA segmentation">
+              <div class="compare-handle" aria-hidden="true"><span class="compare-handle-grip"></span></div>
+              <span class="compare-tag compare-tag-left">Prediction</span>
+              <span class="compare-tag compare-tag-right">Ground truth</span>
+            </div>
+            <input type="range" class="compare-range" min="0" max="100" value="50"
+                   aria-label="Reveal amount between predicted and ground-truth GA segmentation">
           </div>
-          <p class="is-size-6 mt-2" style="color:#7a7a7a;">Predicted GA segmentation</p>
+          <p class="is-size-6 mt-2 has-text-centered" style="color:#7a7a7a;">Segmentation — drag to compare</p>
         </div>
       </div>
+      <p class="viewer-footnote">Ground truth is fixed per modality; switching methods swaps only the
+        prediction layer at <span class="mono-path">./images/figure2_&lt;method&gt;_faf.png</span> /
+        <span class="mono-path">_seg.png</span>. Ground truth lives at
+        <span class="mono-path">figure2_gt_faf.png</span> / <span class="mono-path">figure2_gt_seg.png</span>.</p>
     </div>
   </section>
- 
+
   <section class="section">
     <div class="container is-max-desktop">
       <!-- Abstract -->
@@ -277,16 +406,16 @@ Index · HTML
       </div>
     </div>
   </section>
- 
+
   <!-- Figure 1: architecture -->
   <section class="section">
     <div class="container has-text-centered">
       <h2 class="title is-4">Overview of the GAP-INR architecture</h2>
- 
-      <div class="img-slot" data-placeholder="Figure1.png">
-        <img class="framed-image" src="./images/Figure1.png" alt="GAP-INR architecture overview">
+
+      <div class="img-slot" data-placeholder="figure1_architecture.png">
+        <img class="framed-image" src="./images/figure1_architecture.png" alt="GAP-INR architecture overview">
       </div>
- 
+
       <p class="is-size-5 mt-3">
         A single SIREN decoder is shared across every patient-eye in the dataset, modulated by two signals:<br>
         <strong>(a) Training:</strong> subject <i>i</i>'s visits (t<sub>1</sub>…t<sub>4</sub>) supervise the
@@ -298,10 +427,10 @@ Index · HTML
         the reconstruction and segmentation loss into the latent alone. Querying t<sub>4</sub> then predicts a
         visit that was never acquired.
       </p>
- 
+
     </div>
   </section>
- 
+
   <!-- Figure 3: interactive trajectory viewer -->
   <section class="section">
     <div class="container is-max-desktop">
@@ -313,20 +442,20 @@ Index · HTML
         marker was held out entirely. Between and beyond real visits, the field is queried at timestamps that
         were never acquired.
       </p>
- 
+
       <div class="method-selector" id="eyeSelect">
         <button class="method-pill is-active" data-eye="0">Eye A — 4 visits</button>
         <button class="method-pill" data-eye="1">Eye B — 3 visits</button>
         <button class="method-pill" data-eye="2">Eye C — 4 visits, fast growth</button>
       </div>
- 
+
       <div class="status-legend">
         <span><span class="dot" style="background:#1976D2"></span>Observed</span>
         <span><span class="dot" style="background:#c8951a"></span>Held-out</span>
         <span><span class="dot" style="background:#26A69A"></span>Interpolated</span>
         <span><span class="dot" style="background:#AB47BC"></span>Extrapolated</span>
       </div>
- 
+
       <div class="viewer-box">
         <div class="columns is-vcentered">
           <div class="column is-4 has-text-centered">
@@ -349,7 +478,7 @@ Index · HTML
             <div class="metric-note" id="mNote">Reconstruction of an observed visit — ground truth available.</div>
           </div>
         </div>
- 
+
         <div class="timeline-wrap">
           <div class="timeline-track-outer" id="timelineAxis">
             <div class="timeline-line"></div>
@@ -361,20 +490,20 @@ Index · HTML
         predictions and metrics via the <code>EYES</code> array in the page script.</p>
     </div>
   </section>
- 
+
   <!-- Figure 4: per-eye trajectories -->
   <section class="section">
     <div class="container">
       <h2 class="title is-4 has-text-centered">Per-Eye Lesion Area Trajectories</h2>
- 
+
       <div class="columns is-centered">
         <div class="column is-five-sixths">
-          <div class="img-slot" data-placeholder="Figure4.png&#10;&#10;small-multiples grid, one panel per test eye">
-            <img class="framed-image" src="./images/Figure4.png" alt="Grid of per-eye lesion area scatter plots">
+          <div class="img-slot" data-placeholder="figure4_trajectories_grid.png&#10;&#10;small-multiples grid, one panel per test eye">
+            <img class="framed-image" src="./images/figure4_trajectories_grid.png" alt="Grid of per-eye lesion area scatter plots">
           </div>
         </div>
       </div>
- 
+
       <div class="columns is-centered mt-3">
         <div class="column is-four-fifths">
           <p class="is-size-5 has-text-centered">
@@ -384,7 +513,7 @@ Index · HTML
           </p>
         </div>
       </div>
- 
+
       <div class="columns is-centered">
         <div class="column is-four-fifths">
           <div class="callout-box">
@@ -397,7 +526,7 @@ Index · HTML
       </div>
     </div>
   </section>
- 
+
   <!-- Figure 5: ablation -->
   <section class="section">
     <div class="container has-text-centered">
@@ -405,11 +534,11 @@ Index · HTML
       <p class="is-size-6 mb-4" style="color:#666;">
         Channel count and spatial grid size of the per-eye latent, swept jointly.
       </p>
- 
-      <div class="img-slot" data-placeholder="Figure5.png&#10;&#10;heatmap: channel count × latent grid size">
-        <img class="framed-image" src="./images/Figure5.png" alt="Heatmap of held-out performance across latent channel count and spatial grid size">
+
+      <div class="img-slot" data-placeholder="figure5_ablation_heatmap.png&#10;&#10;heatmap: channel count × latent grid size">
+        <img class="framed-image" src="./images/figure5_ablation_heatmap.png" alt="Heatmap of held-out performance across latent channel count and spatial grid size">
       </div>
- 
+
       <p class="is-size-5 mt-3">
         The per-eye latent is a grid of shape (channels, H, W). Too coarse and the shared decoder cannot carry
         enough per-eye detail; too large and the latent risks memorising rather than generalising across visits.
@@ -418,7 +547,7 @@ Index · HTML
       </p>
     </div>
   </section>
- 
+
   <section class="section" id="BibTeX">
     <div class="container is-max-desktop content">
       <h2 class="title">BibTeX</h2>
@@ -431,7 +560,7 @@ Index · HTML
       </code></pre>
     </div>
   </section>
- 
+
   <footer class="footer">
     <div class="container has-text-centered">
       <p class="is-size-7" style="color:#9a9a9a;">
@@ -439,7 +568,7 @@ Index · HTML
       </p>
     </div>
   </footer>
- 
+
 <script>
 /* ===================================================================
    Demo data model. Replace with real per-eye visits / predictions.
@@ -451,7 +580,7 @@ const STATUS_LABEL = {
   actual:'Observed visit', holdout:'Held-out visit',
   interpolated:'Interpolated', extrapolated:'Extrapolated (forecast)'
 };
- 
+
 const EYES = [
   { name:'Eye A', base:0.85, rate:0.0032, power:1.32, seed:[0.4,2.1],
     visits:[
@@ -474,7 +603,7 @@ const EYES = [
       {week:34, status:'actual',  psnr:34.6, ssim:0.935, noise:-0.015},
     ]},
 ];
- 
+
 function predictedArea(eye, w){ return eye.base + eye.rate * Math.pow(Math.max(w,0), eye.power); }
 function gtAreaAtVisit(eye, visit){ return predictedArea(eye, visit.week) * (1 + visit.noise); }
 function statusAt(eye, w){
@@ -485,26 +614,45 @@ function statusAt(eye, w){
   return {week:w, status:'interpolated', synthetic:true};
 }
 function axisMax(eye){ return eye.visits[eye.visits.length-1].week + 24; }
- 
+
+/* ---- Precomputed trig tables: the blob's angle/cos/sin values never
+   change, only its radius does, so we compute them once instead of on
+   every single frame (2 canvases × ~65 points × 2 trig calls, every
+   pointer/drag event, otherwise). ---- */
+const BLOB_N = 64;
+const BLOB_ANGLES = new Float32Array(BLOB_N + 1);
+const BLOB_COS = new Float32Array(BLOB_N + 1);
+const BLOB_SIN = new Float32Array(BLOB_N + 1);
+for(let i=0;i<=BLOB_N;i++){
+  const a = (i/BLOB_N) * Math.PI*2;
+  BLOB_ANGLES[i]=a; BLOB_COS[i]=Math.cos(a); BLOB_SIN[i]=Math.sin(a);
+}
+
 function blobPath(ctx, cx, cy, r, seed){
   ctx.beginPath();
-  const N = 64;
-  for(let i=0;i<=N;i++){
-    const a = (i/N) * Math.PI*2;
+  for(let i=0;i<=BLOB_N;i++){
+    const a = BLOB_ANGLES[i];
     const rr = r * (1 + 0.14*Math.sin(3*a+seed[0]) + 0.07*Math.sin(5*a+seed[1]));
-    const x = cx + rr*Math.cos(a), y = cy + rr*Math.sin(a);
+    const x = cx + rr*BLOB_COS[i], y = cy + rr*BLOB_SIN[i];
     if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
   }
   ctx.closePath();
 }
- 
-function drawFaf(ctx, size, areaMm2, seed){
-  ctx.clearRect(0,0,size,size);
+
+/* ---- Static FAF background (gradient + vessel arcs) never depends on
+   the slider position — render it once to an offscreen canvas and just
+   blit it with drawImage every frame instead of rebuilding the gradient
+   and re-stroking 5 arcs on every single pointer move. ---- */
+let fafBackground = null;
+function getFafBackground(size){
+  if(fafBackground) return fafBackground;
+  const off = document.createElement('canvas');
+  off.width = size; off.height = size;
+  const ctx = off.getContext('2d');
   const cx=size/2, cy=size/2;
   const g = ctx.createRadialGradient(cx,cy,4,cx,cy,size*0.62);
   g.addColorStop(0,'#3c4a3f'); g.addColorStop(0.55,'#26332a'); g.addColorStop(1,'#0c1210');
   ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,size*0.48,0,Math.PI*2); ctx.fill();
- 
   ctx.strokeStyle='rgba(140,170,150,0.18)'; ctx.lineWidth=1.4;
   for(let i=0;i<5;i++){
     ctx.beginPath();
@@ -512,16 +660,21 @@ function drawFaf(ctx, size, areaMm2, seed){
     ctx.arc(cx, cy, r0, a0, a0+2.2);
     ctx.stroke();
   }
- 
+  fafBackground = off;
+  return off;
+}
+
+function drawFaf(ctx, size, areaMm2, seed){
+  ctx.clearRect(0,0,size,size);
+  ctx.drawImage(getFafBackground(size), 0, 0);
+  const cx=size/2, cy=size/2;
   const r = Math.sqrt(areaMm2/Math.PI) * (size*0.052);
-  ctx.save();
   blobPath(ctx, cx, cy, r*1.32, seed);
   ctx.strokeStyle='rgba(214,232,150,0.55)'; ctx.lineWidth=3; ctx.stroke();
-  ctx.restore();
   blobPath(ctx, cx, cy, r, seed);
   ctx.fillStyle='#0a0e0b'; ctx.fill();
 }
- 
+
 function drawSeg(ctx, size, areaMm2, seed){
   ctx.clearRect(0,0,size,size);
   ctx.fillStyle='#05070a'; ctx.fillRect(0,0,size,size);
@@ -530,52 +683,76 @@ function drawSeg(ctx, size, areaMm2, seed){
   blobPath(ctx, cx, cy, r, seed);
   ctx.fillStyle='#f4f4f4'; ctx.fill();
 }
- 
+
 let currentEye = EYES[0];
 const cvFaf = document.getElementById('cvFaf'), ctxFaf = cvFaf.getContext('2d');
 const cvSeg = document.getElementById('cvSeg'), ctxSeg = cvSeg.getContext('2d');
 const scrubber = document.getElementById('scrubber');
 const axis = document.getElementById('timelineAxis');
- 
-function render(){
-  const w = parseFloat(scrubber.value);
+
+/* Cache DOM lookups once instead of re-querying on every render() call. */
+const dom = {
+  badgeDot: document.querySelector('#statusBadge .dot'),
+  statusText: document.getElementById('statusText'),
+  mWeek: document.getElementById('mWeek'),
+  mPredArea: document.getElementById('mPredArea'),
+  mPsnr: document.getElementById('mPsnr'),
+  mSsim: document.getElementById('mSsim'),
+  mGtArea: document.getElementById('mGtArea'),
+  mNote: document.getElementById('mNote'),
+};
+
+function render(w){
   const info = statusAt(currentEye, w);
   const pred = predictedArea(currentEye, w);
- 
+
   drawFaf(ctxFaf, cvFaf.width, pred, currentEye.seed);
   drawSeg(ctxSeg, cvSeg.width, pred, currentEye.seed);
- 
-  const badge = document.getElementById('statusBadge');
-  badge.querySelector('.dot').style.background = STATUS_COLOR[info.status];
-  document.getElementById('statusText').textContent = STATUS_LABEL[info.status];
-  document.getElementById('mWeek').textContent = w.toFixed(1) + ' w';
-  document.getElementById('mPredArea').textContent = pred.toFixed(2) + ' mm²';
- 
+
+  dom.badgeDot.style.background = STATUS_COLOR[info.status];
+  dom.statusText.textContent = STATUS_LABEL[info.status];
+  dom.mWeek.textContent = w.toFixed(1) + ' w';
+  dom.mPredArea.textContent = pred.toFixed(2) + ' mm²';
+
   if(info.status === 'actual' || info.status === 'holdout'){
     const visit = currentEye.visits.find(v => Math.abs(v.week-w) < 0.3);
     if(visit){
-      document.getElementById('mPsnr').textContent = visit.psnr.toFixed(1) + ' dB';
-      document.getElementById('mSsim').textContent = visit.ssim.toFixed(3);
-      document.getElementById('mGtArea').textContent = gtAreaAtVisit(currentEye, visit).toFixed(2) + ' mm²';
-      document.getElementById('mNote').textContent = info.status === 'holdout'
+      dom.mPsnr.textContent = visit.psnr.toFixed(1) + ' dB';
+      dom.mSsim.textContent = visit.ssim.toFixed(3);
+      dom.mGtArea.textContent = gtAreaAtVisit(currentEye, visit).toFixed(2) + ' mm²';
+      dom.mNote.textContent = info.status === 'holdout'
         ? 'Held out from latent fitting entirely — prediction shown is a true generalisation test.'
         : 'Reconstruction of an observed visit — ground truth available.';
       return;
     }
   }
-  document.getElementById('mPsnr').textContent = '—';
-  document.getElementById('mSsim').textContent = '—';
-  document.getElementById('mGtArea').textContent = 'n/a';
-  document.getElementById('mNote').textContent = info.status === 'extrapolated'
+  dom.mPsnr.textContent = '—';
+  dom.mSsim.textContent = '—';
+  dom.mGtArea.textContent = 'n/a';
+  dom.mNote.textContent = info.status === 'extrapolated'
     ? 'Beyond the last observed visit — a genuine forecast, no ground truth exists.'
     : 'Between two observed visits — no acquisition exists at this timepoint.';
 }
- 
+
+/* rAF-coalesced scrubbing: a drag or touch-move can fire the 'input'
+   event many times per frame. We only ever schedule one render per
+   animation frame, always using the most recent value — extra events
+   in between are free (state overwrite, no work), so the UI never
+   falls behind the pointer even under a flood of input events. */
+let pendingWeek = null, rafScheduled = false;
+function scheduleRender(w){
+  pendingWeek = w;
+  if(rafScheduled) return;
+  rafScheduled = true;
+  requestAnimationFrame(() => { render(pendingWeek); rafScheduled = false; });
+}
+
 function buildTimeline(){
   document.querySelectorAll('.timeline-marker').forEach(m => m.remove());
   const max = axisMax(currentEye);
   scrubber.max = max;
   scrubber.value = currentEye.visits[0].week;
+  const frag = document.createDocumentFragment();
   currentEye.visits.forEach(v => {
     const pct = (v.week / max) * 100;
     const m = document.createElement('div');
@@ -583,14 +760,15 @@ function buildTimeline(){
     m.style.left = pct + '%';
     m.style.background = STATUS_COLOR[v.status];
     m.innerHTML = `<span class="tt">${v.week}w</span>`;
-    m.addEventListener('click', () => { scrubber.value = v.week; render(); });
-    axis.appendChild(m);
+    m.addEventListener('click', () => { scrubber.value = v.week; scheduleRender(v.week); });
+    frag.appendChild(m);
   });
-  render();
+  axis.appendChild(frag);
+  render(parseFloat(scrubber.value));
 }
- 
-scrubber.addEventListener('input', render);
- 
+
+scrubber.addEventListener('input', () => scheduleRender(parseFloat(scrubber.value)), { passive: true });
+
 document.getElementById('eyeSelect').addEventListener('click', (e)=>{
   const btn = e.target.closest('.method-pill'); if(!btn) return;
   document.querySelectorAll('#eyeSelect .method-pill').forEach(p=>p.classList.remove('is-active'));
@@ -598,28 +776,79 @@ document.getElementById('eyeSelect').addEventListener('click', (e)=>{
   currentEye = EYES[parseInt(btn.dataset.eye,10)];
   buildTimeline();
 });
- 
+
 buildTimeline();
- 
-/* Figure 2 pill switcher */
-document.querySelectorAll('.method-selector').forEach(sel=>{
-  if(sel.id === 'eyeSelect') return;
-  sel.addEventListener('click', (e)=>{
-    const btn = e.target.closest('.method-pill'); if(!btn) return;
-    sel.querySelectorAll('.method-pill').forEach(p=>p.classList.remove('is-active'));
-    btn.classList.add('is-active');
-    const m = btn.dataset.method;
-    document.querySelector('#fig2faf img').src = `./images/figure2_${m}_faf.png`;
-    document.querySelector('#fig2seg img').src = `./images/figure2_${m}_seg.png`;
-  });
+
+/* ===================================================================
+   Compare slider (prediction vs. ground truth), used in the
+   "Held-out reconstruction" section for both FAF and segmentation.
+
+   Every drag only ever touches one CSS custom property, --reveal, on
+   the .compare-slider element. Both the clip-path on the prediction
+   layer and the handle's position read from that single variable via
+   calc() in CSS, so one JS write updates both — no separate style
+   writes to fight over, and both effects (clip-path, transform) are
+   compositor-only: dragging never triggers layout or repaints the
+   underlying images.
+
+   Like the temporal scrubber, rapid pointer/touch events are coalesced
+   into at most one write per animation frame.
+   =================================================================== */
+function initCompareSlider(root){
+  const range = root.querySelector('.compare-range');
+  let pending = null, scheduled = false;
+  function apply(v){
+    pending = v;
+    if(scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      root.style.setProperty('--reveal', pending);
+      scheduled = false;
+    });
+  }
+  range.addEventListener('input', () => apply(range.value), { passive: true });
+  apply(range.value);
+}
+document.querySelectorAll('.compare-slider').forEach(initCompareSlider);
+
+/* Figure 2 method-pill switcher: only the prediction layer changes —
+   ground truth is the same acquisition regardless of method. */
+document.getElementById('fig2Methods').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.method-pill'); if(!btn) return;
+  document.querySelectorAll('#fig2Methods .method-pill').forEach(p=>p.classList.remove('is-active'));
+  btn.classList.add('is-active');
+  const m = btn.dataset.method;
+  document.querySelector('#fig2faf .compare-pred').src = `./images/figure2_${m}_faf.png`;
+  document.querySelector('#fig2seg .compare-pred').src = `./images/figure2_${m}_seg.png`;
 });
- 
-/* Missing-image graceful fallback */
+
+/* Missing-image graceful fallback, for both plain figure slots and the
+   two stacked layers inside each compare slider. */
 document.querySelectorAll('.img-slot img').forEach(img=>{
   img.addEventListener('error', function(){ this.closest('.img-slot').classList.add('img-missing'); });
   img.addEventListener('load', function(){ this.closest('.img-slot').classList.remove('img-missing'); });
 });
+
+document.querySelectorAll('.compare-slider').forEach(root=>{
+  const missing = new Set();
+  const label = root.dataset.modality === 'seg' ? 'segmentation' : 'FAF';
+  root.querySelectorAll('.compare-img').forEach(img=>{
+    const kind = img.classList.contains('compare-gt') ? 'ground truth' : 'prediction';
+    img.addEventListener('error', function(){
+      this.style.visibility = 'hidden';
+      missing.add(kind);
+      root.classList.add('img-missing');
+      root.querySelector('.compare-frame').setAttribute('data-placeholder',
+        `missing ${label} image(s): ${[...missing].join(', ')}\n\nsee ./images/ paths in the HTML comments`);
+    });
+    img.addEventListener('load', function(){
+      this.style.visibility = 'visible';
+      missing.delete(kind);
+      if(missing.size === 0) root.classList.remove('img-missing');
+    });
+  });
+});
 </script>
- 
+
 </body>
 </html>
