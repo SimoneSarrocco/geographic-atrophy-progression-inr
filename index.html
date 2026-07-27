@@ -408,15 +408,12 @@
       </div>
 
       <p class="is-size-5 mt-3">
-        A single SIREN decoder is shared across every patient-eye in the dataset, modulated by two signals:<br>
-        <strong>(a) Training:</strong> subject <i>i</i>'s visits (t<sub>1</sub>…t<sub>4</sub>) supervise the
-        shared decoder, FiLM-modulated by the eye's latent code z<sub>i</sub>, the temporal condition
-        <i>t</i>, and age at visit. Reconstruction (f<sub>θ</sub><sup>faf</sup>) and segmentation
-        (f<sub>θ</sub><sup>seg</sup>) heads read out from the shared trunk.<br>
-        <strong>(b) Test-time optimisation:</strong> for a new subject <i>k</i>, the decoder is frozen and only
-        the latent z<sub>k</sub> is fit on the available visits (t<sub>1</sub>…t<sub>3</sub>) by backpropagating
-        the reconstruction and segmentation loss into the latent alone. Querying t<sub>4</sub> then predicts a
-        visit that was never acquired.
+        Our proposed model architecture. In the training phase (a), a spatial coordinate $\mathbf{x}\in\mathbb{R}^2$ 
+        is fed into the MLP. Each layer of the MLP is conditioned by concatenating the latent vector $z_i$ and the time variables 
+        via modulation. The INR outputs both the pixel intensity value $\hat{I}_i(\mathbf{x})$ and the GA segmentation label $\hat{S}_i(\mathbf{x})$. 
+        During test-time optimisation (b), a new latent vector $z_k$ is used for a new eye $k$ and optimised across both FAF images 
+        and GA segmentations, while keeping the INR parameters frozen. By concatenating the new optimised latent vector 
+        with the time-conditioning variables, the forward pass generates the new FAF image and GA segmentation at the specified time.
       </p>
 
     </div>
