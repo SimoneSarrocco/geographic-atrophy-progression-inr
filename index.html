@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Geographic Atrophy Progression using Implicit Neural Representations</title>
+  <title>Modelling Geographic Atrophy Progression using Implicit Neural Representations</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <!-- FontAwesome & Academicons -->
@@ -14,15 +14,15 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
 
   <!-- KaTeX CSS and JS -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" 
-        integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" 
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
+        integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV"
         crossorigin="anonymous">
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" 
-          integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" 
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"
+          integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8"
           crossorigin="anonymous">
   </script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" 
-          integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" 
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+          integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05"
           crossorigin="anonymous"
           onload="renderMathInElement(document.body);">
   </script>
@@ -31,7 +31,7 @@
     body{ font-family: 'Noto Sans', sans-serif; }
     .title, .publication-title{ font-family: 'Google Sans', sans-serif; }
 
-    /* Method / eye selector pills, matching the comparison viewer pattern */
+    /* Method / eye / scenario pills, matching the comparison viewer pattern */
     .method-selector{
       display: flex;
       flex-wrap: wrap;
@@ -59,10 +59,6 @@
       border-color: #3273dc;
       color: #fff;
       box-shadow: 0 2px 4px rgba(50, 115, 220, 0.3);
-    }
-    .method-pill.is-active.is-muted{
-      background-color: #7a7a7a;
-      border-color: #7a7a7a;
     }
 
     .framed-image{
@@ -107,14 +103,42 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.04);
       padding: 28px;
     }
-    .viewer-canvas{
+    /* All 10 (or up to 14, incl. ground truth) frames for the current eye
+       are mounted here at once as real <img> elements — see buildFrameStack()
+       — instead of a single <img> whose src gets swapped. Swapping src on
+       drag forces a decode+paint cycle per frame change, which is what made
+       the slider feel laggy; toggling opacity on already-painted layers is
+       a compositor-only operation, so switching frames is effectively free
+       regardless of how fast the pointer moves. */
+    .frame-stack{
+      position: relative;
       width: 100%;
       aspect-ratio: 1 / 1;
+      overflow: hidden;
       border-radius: 8px;
       border: 1px solid #e0e0e0;
       background: #111;
     }
-    .canvas-caption{
+    .frame-stack img{
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      opacity: 0;
+      pointer-events: none;
+      will-change: opacity;
+    }
+    .frame-stack img.is-active{ opacity: 1; }
+    .gt-toggle-row{
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.85rem; color: #4a4a4a; margin: 14px 0 4px;
+    }
+    .gt-toggle-row input[disabled] + label,
+    .gt-toggle-row.is-disabled{ color: #bbb; }
+    .timeline-marker.is-minor{ width: 9px; height: 9px; top: 23px; }
+    .frame-caption{
       text-align: center; font-size: 0.85rem; color: #6a6a6a; margin-top: 8px;
     }
     .readout-table{ width: 100%; font-size: 0.92rem; }
@@ -127,7 +151,6 @@
       border: 1px solid #ddd; background: #f7f7f7; margin-bottom: 14px;
     }
     .status-pill .dot{ width: 8px; height: 8px; border-radius: 50%; }
-    .metric-note{ font-size: 0.82rem; color: #9a9a9a; font-style: italic; margin-top: 10px; }
 
     .timeline-wrap{ margin-top: 26px; }
     .timeline-track-outer{ position: relative; height: 54px; }
@@ -142,7 +165,8 @@
       font-size: 11px; color: #7a7a7a; white-space: nowrap;
     }
     input[type=range].scrubber{
-      position: absolute; top: 12px; left: 0; width: 100%; height: 16px; margin: 0;
+      position: absolute; top: 4px; left: 0; width: 100%; height: 40px; margin: 0;
+      cursor: ew-resize;
     }
     .viewer-footnote{ font-size: 0.8rem; color: #a5a5a5; margin-top: 18px; text-align: center; }
 
@@ -164,6 +188,15 @@
        method image is showing) and the handle position in one shot —
        both are compositor-only operations (clip-path + transform), so
        dragging never triggers layout or paint of the full image.
+
+       Orientation: each slider carries a data-orientation attribute
+       ("h" default, or "v"), toggled by its own button. Dragging is
+       bound directly to the whole image (pointer events on
+       .compare-frame, not just the thin native range control below
+       it), and reads whichever axis (clientX for horizontal,
+       clientY for vertical) matches the active orientation — so the
+       slider responds to a real drag gesture anywhere on the image,
+       in either direction.
        ----------------------------------------------------------------- */
     .compare-slider{ --reveal: 50; }
     .compare-frame{
@@ -175,6 +208,11 @@
       border: 1px solid #ececec;
       background: repeating-linear-gradient(135deg, #fafafa 0 10px, #f2f2f2 10px 20px);
       touch-action: pan-y;
+      cursor: ew-resize;
+    }
+    .compare-slider[data-orientation="v"] .compare-frame{
+      touch-action: pan-x;
+      cursor: ns-resize;
     }
     .compare-img{
       position: absolute;
@@ -191,6 +229,9 @@
       z-index: 2;
       clip-path: inset(0 calc(100% - var(--reveal) * 1%) 0 0);
     }
+    .compare-slider[data-orientation="v"] .compare-img.compare-pred{
+      clip-path: inset(0 0 calc(100% - var(--reveal) * 1%) 0);
+    }
     .compare-handle{
       position: absolute;
       top: 0; bottom: 0;
@@ -202,6 +243,12 @@
       z-index: 3;
       pointer-events: none;
       will-change: left;
+    }
+    .compare-slider[data-orientation="v"] .compare-handle{
+      left: 0; right: 0; top: calc(var(--reveal) * 1%); bottom: auto;
+      width: 100%; height: 2px;
+      transform: translateY(-50%);
+      will-change: top;
     }
     .compare-handle-grip{
       position: absolute; top: 50%; left: 50%;
@@ -217,6 +264,9 @@
       transform: translate(-50%, -55%);
       font-size: 14px; color: #3273dc;
     }
+    .compare-slider[data-orientation="v"] .compare-handle-grip::before{
+      content: "⇕";
+    }
     .compare-tag{
       position: absolute; top: 10px;
       background: rgba(255,255,255,0.9);
@@ -231,6 +281,25 @@
     }
     .compare-tag-left{ left: 10px; }
     .compare-tag-right{ right: 10px; }
+    .compare-slider[data-orientation="v"] .compare-tag-left{
+      top: 10px; left: 50%; right: auto; transform: translateX(-50%);
+    }
+    .compare-slider[data-orientation="v"] .compare-tag-right{
+      top: auto; bottom: 10px; left: 50%; right: auto; transform: translateX(-50%);
+    }
+    .compare-controls{ display: flex; justify-content: center; margin-top: 8px; }
+    .orientation-toggle{
+      background: #f5f5f5;
+      border: 1px solid #dbdbdb;
+      border-radius: 14px;
+      padding: 4px 12px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #4a4a4a;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .orientation-toggle:hover{ background: #eeeeee; border-color: #b5b5b5; }
     .compare-range{
       -webkit-appearance: none;
       appearance: none;
@@ -276,7 +345,7 @@
       <div class="container is-max-desktop">
         <div class="columns is-centered">
           <div class="column has-text-centered">
-            <h1 class="title is-1 publication-title">Geographic Atrophy Progression using Implicit Neural Representations</h1>
+            <h1 class="title is-1 publication-title">Modelling Geographic Atrophy Progression using Implicit Neural Representations</h1>
             <div class="is-size-5 publication-authors">
               <span class="author-block">
                 <a href="https://orcid.org/0009-0007-5854-7382">Simone Sarrocco</a><sup>1</sup>,
@@ -300,7 +369,7 @@
                 <a href="https://orcid.org/0000-0001-8785-2713">Philippe C. Cattin</a><sup>1,*</sup>
               </span>
             </div>
- 
+
             <div class="is-size-5 publication-authors">
               <span class="author-block"><sup>1</sup>Department of Biomedical Engineering, University of Basel, Allschwil, Switzerland</span>
               <span class="author-block"><sup>2</sup>Department of Ophthalmology, University Hospital Basel, Basel, Switzerland</span>
@@ -329,62 +398,6 @@
       </div>
     </div>
   </section>
-  
-  <!-- Figure 2: baseline comparison, method-pill switcher -->
-  <section class="section">
-    <div class="container">
-      <h2 class="title is-4 has-text-centered">
-        Held-Out Reconstruction: Comparison Viewer
-      </h2>
-      <p class="has-text-centered subtitle is-size-6 mb-4" style="color: #666;">
-        Predicted FAF image and GA segmentation for one held-out visit, compared across methods.
-        Copy-forward simply repeats the last available visit.
-      </p>
-
-      <div class="method-selector" id="fig2Methods">
-        <button class="method-pill is-active" data-method="ours">GAP-INR (Ours)</button>
-        <button class="method-pill" data-method="imageflownet">ImageFlowNet</button>
-        <button class="method-pill" data-method="i2sbunet">I2SB-UNet</button>
-        <button class="method-pill" data-method="tunet">T-UNet</button>
-        <button class="method-pill is-muted" data-method="copyforward">Copy-forward</button>
-      </div>
-
-      <div class="columns is-centered">
-        <div class="column is-half">
-          <div class="compare-slider" id="fig2faf" data-modality="faf" style="--reveal:50;">
-            <div class="compare-frame">
-              <img class="compare-img compare-gt" src="./images/figure2_gt_faf.bmp" alt="Ground truth FAF image">
-              <img class="compare-img compare-pred" src="./images/figure2_ours_faf.bmp" alt="Predicted FAF image">
-              <div class="compare-handle" aria-hidden="true"><span class="compare-handle-grip"></span></div>
-              <span class="compare-tag compare-tag-left">Prediction</span>
-              <span class="compare-tag compare-tag-right">Ground truth</span>
-            </div>
-            <input type="range" class="compare-range" min="0" max="100" value="50"
-                   aria-label="Reveal amount between predicted and ground-truth FAF image">
-          </div>
-          <p class="is-size-6 mt-2 has-text-centered" style="color:#7a7a7a;">FAF — drag to compare</p>
-        </div>
-        <div class="column is-half">
-          <div class="compare-slider" id="fig2seg" data-modality="seg" style="--reveal:50;">
-            <div class="compare-frame">
-              <img class="compare-img compare-gt" src="./images/figure2_gt_seg.bmp" alt="Ground truth GA segmentation">
-              <img class="compare-img compare-pred" src="./images/figure2_ours_seg.bmp" alt="Predicted GA segmentation">
-              <div class="compare-handle" aria-hidden="true"><span class="compare-handle-grip"></span></div>
-              <span class="compare-tag compare-tag-left">Prediction</span>
-              <span class="compare-tag compare-tag-right">Ground truth</span>
-            </div>
-            <input type="range" class="compare-range" min="0" max="100" value="50"
-                   aria-label="Reveal amount between predicted and ground-truth GA segmentation">
-          </div>
-          <p class="is-size-6 mt-2 has-text-centered" style="color:#7a7a7a;">Segmentation — drag to compare</p>
-        </div>
-      </div>
-      <p class="viewer-footnote">Ground truth is fixed per modality; switching methods swaps only the
-        prediction layer at <span class="mono-path">./images/figure2_&lt;method&gt;_faf.png</span> /
-        <span class="mono-path">_seg.png</span>. Ground truth lives at
-        <span class="mono-path">figure2_gt_faf.bmp</span> / <span class="mono-path">figure2_gt_seg.bmp</span>.</p>
-    </div>
-  </section>
 
   <section class="section">
     <div class="container is-max-desktop">
@@ -395,14 +408,14 @@
           <div class="content has-text-justified">
             <p>
 
-              <strong>Age-related macular degeneration</strong> (AMD) is the major cause of blindness in the Western world. 
-              Its late dry phase is characterised by irreversible atrophic areas, namely <strong>geographic atrophy</strong> (GA). 
-              Longitudinal <strong>Fundus Autofluorescence</strong> (FAF) image acquisitions are currently the main tool for 
-              assessing lesion growth over time at the image level. However, due to its highly individualised progression, 
-              the evolution of late AMD remains poorly understood. In this work, we propose using 
-              <strong>Implicit Neural Representations</strong> (INRs) to model GA progression at the individual level in a low-data setting. 
-              Our approach generates both FAF and GA segmentation at both past and future time points. 
-              Compared with flow-matching models, diffusion-based models, and time-aware U-Net architectures, 
+              <strong>Age-related macular degeneration</strong> (AMD) is the major cause of blindness in the Western world.
+              Its late dry phase is characterised by irreversible atrophic areas, namely <strong>geographic atrophy</strong> (GA).
+              Longitudinal <strong>Fundus Autofluorescence</strong> (FAF) image acquisitions are currently the main tool for
+              assessing lesion growth over time at the image level. However, due to its highly individualised progression,
+              the evolution of late AMD remains poorly understood. In this work, we propose using
+              <strong>Implicit Neural Representations</strong> (INRs) to model GA progression at the individual level in a low-data setting.
+              Our approach generates both FAF and GA segmentation at both past and future time points.
+              Compared with flow-matching models, diffusion-based models, and time-aware U-Net architectures,
               our method achieves the best segmentation quality in different scenarios, providing the <strong>lowest mean absolute error</strong> (MAE)
               for the GA lesion area and the <strong>best DICE score</strong> without sacrificing FAF image quality.
             </p>
@@ -416,85 +429,157 @@
   <section class="section">
     <div class="container has-text-centered">
       <h2 class="title is-4">Overview of the GAP-INR architecture</h2>
-  
+
       <div class="img-slot" data-placeholder="Figure1.png">
         <img class="framed-image" src="./images/Figure1.png" alt="GAP-INR architecture overview">
       </div>
-      
+
       <p class="is-size-5 mt-3">
-        Our proposed model architecture. In the training phase (a), a spatial coordinate 
+        Our proposed model architecture. In the training phase (a), a spatial coordinate
         \(\mathbf{x}\in\mathbb{R}^2\)
-        is fed into the MLP. Each layer of the MLP is conditioned by concatenating the latent vector 
-        \(z_i\) and the time variables 
-        via modulation. The INR outputs both the pixel intensity value 
-        \(\hat{I}_i(\mathbf{x})\) and the GA segmentation label 
-        \(\hat{S}_i(\mathbf{x})\). 
-        During test-time optimisation (b), a new latent vector 
-        \(z_k\) is used for a new eye 
-        \(k\) and optimised across both FAF images 
-        and GA segmentations, while keeping the INR parameters frozen. By concatenating the new optimised latent vector 
+        is fed into the MLP. Each layer of the MLP is conditioned by concatenating the latent vector
+        \(z_i\) and the time variables
+        via modulation. The INR outputs both the pixel intensity value
+        \(\hat{I}_i(\mathbf{x})\) and the GA segmentation label
+        \(\hat{S}_i(\mathbf{x})\).
+        During test-time optimisation (b), a new latent vector
+        \(z_k\) is used for a new eye
+        \(k\) and optimised across both FAF images
+        and GA segmentations, while keeping the INR parameters frozen. By concatenating the new optimised latent vector
         with the time-conditioning variables, the forward pass generates the new FAF image and GA segmentation at the specified time.
       </p>
     </div>
   </section>
 
-  <!-- Figure 3: interactive trajectory viewer -->
+  <!-- Figure 3: interactive trajectory viewer. This is the flagship interactive
+       element: GAP-INR's defining property is continuous longitudinal prediction,
+       not single-visit reconstruction, so it leads the demos. -->
   <section class="section">
     <div class="container is-max-desktop">
       <h2 class="title is-4 has-text-centered">
         Explore a Patient Trajectory
       </h2>
       <p class="has-text-centered subtitle is-size-6 mb-4" style="color: #666;">
-        Drag the playhead across an eye's timeline. Filled markers are real visits GAP-INR was fit on; the gold
-        marker was held out entirely. Between and beyond real visits, the field is queried at timestamps that
-        were never acquired.
+        Predictions of FAF and GA segmentation maps over time for a single eye from the test set.
+          A new latent vector is assigned to this eye and optimised on all visits except the one used for evaluation.
+          Interpolated and extrapolated predictions are obtained by setting the value of the temporal variables
+          (number of weeks from the baseline visits, and age of the patient at that visit) in between two existing
+          visits or beyond the last available visit, respectively.
       </p>
 
       <div class="method-selector" id="eyeSelect">
-        <button class="method-pill is-active" data-eye="0">Eye A — 4 visits</button>
-        <button class="method-pill" data-eye="1">Eye B — 3 visits</button>
-        <button class="method-pill" data-eye="2">Eye C — 4 visits, fast growth</button>
+        <button class="method-pill is-active" data-eye="0">Eye A — 4 real visits</button>
+        <button class="method-pill" data-eye="1">Eye B — 4 real visits</button>
+        <button class="method-pill" data-eye="2">Eye C — 4 real visits</button>
       </div>
 
       <div class="status-legend">
-        <span><span class="dot" style="background:#1976D2"></span>Observed</span>
-        <span><span class="dot" style="background:#c8951a"></span>Held-out</span>
+        <span><span class="dot" style="background:#c8951a"></span>Hold-out (leave-one-out)</span>
         <span><span class="dot" style="background:#26A69A"></span>Interpolated</span>
         <span><span class="dot" style="background:#AB47BC"></span>Extrapolated</span>
       </div>
 
       <div class="viewer-box">
-        <div class="columns is-vcentered">
+        <div class="columns">
           <div class="column is-4 has-text-centered">
-            <canvas id="cvFaf" class="viewer-canvas" width="320" height="320"></canvas>
-            <div class="canvas-caption">Fundus autofluorescence</div>
+            <div class="frame-stack" id="stackFaf"></div>
+            <div class="frame-caption" id="fafCaption">Fundus autofluorescence — predicted</div>
           </div>
           <div class="column is-4 has-text-centered">
-            <canvas id="cvSeg" class="viewer-canvas" width="320" height="320"></canvas>
-            <div class="canvas-caption">GA segmentation</div>
+            <div class="frame-stack" id="stackSeg"></div>
+            <div class="frame-caption" id="segCaption">GA segmentation — predicted</div>
           </div>
           <div class="column is-4">
-            <div class="status-pill" id="statusBadge"><span class="dot"></span><span id="statusText">Observed</span></div>
+            <div class="status-pill" id="statusBadge"><span class="dot"></span><span id="statusText">Hold-out (leave-one-out)</span></div>
             <table class="readout-table">
               <tr><td class="k">Week</td><td class="v" id="mWeek">0.0</td></tr>
               <tr><td class="k">PSNR</td><td class="v" id="mPsnr">—</td></tr>
               <tr><td class="k">SSIM</td><td class="v" id="mSsim">—</td></tr>
+              <tr><td class="k">DICE</td><td class="v" id="mDice">—</td></tr>
               <tr><td class="k">Predicted area</td><td class="v" id="mPredArea">—</td></tr>
               <tr><td class="k">GT area</td><td class="v" id="mGtArea">—</td></tr>
+              <tr><td class="k">Area MAE</td><td class="v" id="mMae">—</td></tr>
             </table>
-            <div class="metric-note" id="mNote">Reconstruction of an observed visit — ground truth available.</div>
+            <div class="gt-toggle-row" id="gtToggleRow">
+              <input type="checkbox" id="gtToggle">
+              <label for="gtToggle">Show ground truth instead of the prediction</label>
+            </div>
           </div>
         </div>
 
         <div class="timeline-wrap">
           <div class="timeline-track-outer" id="timelineAxis">
             <div class="timeline-line"></div>
-            <input type="range" class="scrubber" id="scrubber" min="0" max="60" step="0.25" value="0">
+            <input type="range" class="scrubber" id="scrubber" min="0" max="60" step="0.1" value="0">
           </div>
         </div>
       </div>
-      <p class="viewer-footnote">Synthetic demo data illustrating the interaction model — wire in real per-visit
-        predictions and metrics via the <code>EYES</code> array in the page script.</p>
+      <p class="viewer-footnote">The page is static (no model runs in your browser).</p>
+    </div>
+  </section>
+
+  <!-- Figure 2: held-out reconstruction viewer, Ours only, both evaluation
+       scenarios from the paper. -->
+  <section class="section">
+    <div class="container">
+      <h2 class="title is-4 has-text-centered">
+        Held-Out Reconstruction — Two Evaluation Scenarios
+      </h2>
+      <p class="has-text-centered subtitle is-size-6 mb-4" style="color: #666;">
+        Our model's predicted FAF image and GA segmentation for an eye from the test set in the two Scenarios
+          explored in the paper: take only a pair of available visits, and use the earlier visit as input to predict
+          the more recent visit (Scenario 1); using the full patient's history to predict the last visit (Scenario 2).
+      </p>
+
+      <div class="method-selector" id="fig2Scenario">
+        <button class="method-pill is-active" data-scenario="single">Scenario 1 — single pair</button>
+        <button class="method-pill" data-scenario="history">Scenario 2 — full history</button>
+      </div>
+      <p class="has-text-centered is-size-6 mb-4" id="fig2ScenarioDesc" style="color: #7a7a7a;">
+        Only the very first visit is given as input to predict the last one.
+      </p>
+
+      <div class="columns is-centered">
+        <div class="column is-half">
+          <div class="compare-slider" id="fig2faf" data-modality="faf" data-orientation="h" style="--reveal:50;">
+            <div class="compare-frame">
+              <img class="compare-img compare-gt" id="fig2fafGt" src="./images/trajectory/eyeB_faf_gt_c6.png" alt="Ground truth FAF image">
+              <img class="compare-img compare-pred" id="fig2fafPred" src="./images/trajectory/eyeB_faf_pred_c6_s1.png" alt="Predicted FAF image">
+              <div class="compare-handle" aria-hidden="true"><span class="compare-handle-grip"></span></div>
+              <span class="compare-tag compare-tag-left">Prediction</span>
+              <span class="compare-tag compare-tag-right">Ground truth</span>
+            </div>
+            <div class="compare-controls">
+              <button class="orientation-toggle" type="button">⇔ Horizontal</button>
+            </div>
+            <input type="range" class="compare-range" min="0" max="100" value="50"
+                   aria-label="Reveal amount between predicted and ground-truth FAF image">
+          </div>
+          <p class="is-size-6 mt-2 has-text-centered" style="color:#7a7a7a;">FAF: drag anywhere on the image to compare</p>
+        </div>
+        <div class="column is-half">
+          <div class="compare-slider" id="fig2seg" data-modality="seg" data-orientation="h" style="--reveal:50;">
+            <div class="compare-frame">
+              <img class="compare-img compare-gt" id="fig2segGt" src="./images/trajectory/eyeB_seg_gt_c6.png" alt="Ground truth GA segmentation">
+              <img class="compare-img compare-pred" id="fig2segPred" src="./images/trajectory/eyeB_seg_pred_c6_s1.png" alt="Predicted GA segmentation">
+              <div class="compare-handle" aria-hidden="true"><span class="compare-handle-grip"></span></div>
+              <span class="compare-tag compare-tag-left">Prediction</span>
+              <span class="compare-tag compare-tag-right">Ground truth</span>
+            </div>
+            <div class="compare-controls">
+              <button class="orientation-toggle" type="button">⇔ Horizontal</button>
+            </div>
+            <input type="range" class="compare-range" min="0" max="100" value="50"
+                   aria-label="Reveal amount between predicted and ground-truth GA segmentation">
+          </div>
+          <p class="is-size-6 mt-2 has-text-centered" style="color:#7a7a7a;">Segmentation: drag anywhere on the image to compare</p>
+        </div>
+      </div>
+      <p class="has-text-centered" style="font-weight:600; color:#3273dc;" id="fig2Metrics">PSNR 16.7 dB · DICE 0.59 · Lesion-area MAE 0.39 mm²</p>
+      <p class="viewer-footnote">Both scenarios predict Eye A's <em>same</em> last visit, only the input differs.
+        Scenario 1 (V1→V4) is given just the very first visit; Scenario 2 is given the eye's full prior history
+        (V1, V2, V3). That extra context cuts the lesion-area error roughly 19× (0.39 → 0.02 mm²) and raises DICE
+        from 0.59 to 0.82, showing the benefit of taking into account the full patient's history.</p>
     </div>
   </section>
 
@@ -578,203 +663,245 @@
 
 <script>
 /* ===================================================================
-   Demo data model. Replace with real per-eye visits / predictions.
-   Colours follow the paper's own status convention:
-   observed = blue, held-out = gold, interpolated = teal, extrapolated = purple
+   Trajectory explorer data model.
+   All images and numbers below are real GAP-INR held-out test-set
+   outputs (see ./images/trajectory/). Nothing here is synthetic or
+   procedurally generated — each eye's 10 points are exactly its
+   evaluated timepoints: one
+   baseline (given as input), three genuine leave-one-out hold-outs,
+   three interpolated queries, and three extrapolated forecasts.
+   Colours follow the paper's convention: baseline = blue, hold-out =
+   gold, interpolated = teal, extrapolated = purple.
    =================================================================== */
-const STATUS_COLOR = { actual:'#1976D2', holdout:'#c8951a', interpolated:'#26A69A', extrapolated:'#AB47BC' };
+const STATUS_COLOR = { holdout:'#c8951a', interpolated:'#26A69A', extrapolated:'#AB47BC' };
 const STATUS_LABEL = {
-  actual:'Observed visit', holdout:'Held-out visit',
-  interpolated:'Interpolated', extrapolated:'Extrapolated (forecast)'
+  holdout:'Hold-out (leave-one-out)', interpolated:'Interpolated', extrapolated:'Extrapolated (forecast)'
 };
 
+/* Each eye's 10 points are exactly the timepoints GAP-INR was evaluated at
+   for that eye. Images live at ./images/trajectory/<code>_<faf|seg>_<gt|pred>_c<index>.png
+   — GT crops only exist at indices 0/2/4/6 (the four real visits), matching gtArea
+   being present only there. Every real visit (index 0/2/4/6) is a genuine leave-one-out
+   reconstruction: for that visit, a fresh latent was optimised on the eye's OTHER three
+   visits only, then queried at the held-out one — run separately per position, so no
+   visit is ever "given as input" the way the others are. Interpolated/extrapolated
+   points (no ground truth exists for these) are queried from the fullest-context fit
+   available (all visits up to the last), for the smoothest possible in-between/forecast
+   read — a different, complementary question from "what does leaving this one out cost". */
 const EYES = [
-  { name:'Eye A', base:0.85, rate:0.0032, power:1.32, seed:[0.4,2.1],
-    visits:[
-      {week:0,  status:'actual',  psnr:37.1, ssim:0.961, noise: 0.02},
-      {week:16, status:'actual',  psnr:36.0, ssim:0.952, noise:-0.03},
-      {week:33, status:'holdout', psnr:34.2, ssim:0.928, noise: 0.015},
-      {week:44, status:'actual',  psnr:35.4, ssim:0.944, noise:-0.01},
+  { name:'Eye A', code:'eyeB',
+    points:[
+      {week:0.0,  status:'holdout',      psnr:20.6, ssim:0.624, dice:0.76, gtArea:0.20, predArea:0.22},
+      {week:5.9,  status:'interpolated', predArea:0.23},
+      {week:11.9, status:'holdout',      psnr:15.7, ssim:0.649, dice:0.74, gtArea:0.27, predArea:0.31},
+      {week:17.9, status:'interpolated', predArea:0.34},
+      {week:23.9, status:'holdout',      psnr:16.7, ssim:0.645, dice:0.70, gtArea:0.52, predArea:0.34},
+      {week:35.9, status:'interpolated', predArea:0.61},
+      {week:47.9, status:'holdout',      psnr:17.7, ssim:0.621, dice:0.81, gtArea:0.71, predArea:0.71},
+      {week:59.9, status:'extrapolated', predArea:0.75},
+      {week:71.9, status:'extrapolated', predArea:0.80},
+      {week:83.9, status:'extrapolated', predArea:0.83},
     ]},
-  { name:'Eye B', base:1.4, rate:0.0021, power:1.45, seed:[1.7,0.6],
-    visits:[
-      {week:0,  status:'actual',  psnr:36.4, ssim:0.955, noise: 0.01},
-      {week:20, status:'actual',  psnr:35.7, ssim:0.949, noise: 0.02},
-      {week:41, status:'holdout', psnr:33.5, ssim:0.919, noise:-0.02},
+  { name:'Eye B', code:'eyeA',
+    points:[
+      {week:0.0,  status:'holdout',      psnr:13.1, ssim:0.649, dice:0.94, gtArea:8.85,  predArea:8.72},
+      {week:5.9,  status:'interpolated', predArea:9.24},
+      {week:11.7, status:'holdout',      psnr:18.9, ssim:0.643, dice:0.94, gtArea:9.58,  predArea:9.87},
+      {week:17.5, status:'interpolated', predArea:10.14},
+      {week:23.3, status:'holdout',      psnr:18.4, ssim:0.574, dice:0.94, gtArea:10.62, predArea:10.12},
+      {week:35.3, status:'interpolated', predArea:11.22},
+      {week:47.3, status:'holdout',      psnr:14.3, ssim:0.651, dice:0.95, gtArea:11.10, predArea:11.84},
+      {week:59.3, status:'extrapolated', predArea:12.46},
+      {week:71.3, status:'extrapolated', predArea:12.91},
+      {week:83.3, status:'extrapolated', predArea:13.19},
     ]},
-  { name:'Eye C', base:0.6, rate:0.0058, power:1.28, seed:[2.9,1.1],
-    visits:[
-      {week:0,  status:'actual',  psnr:35.9, ssim:0.947, noise:-0.02},
-      {week:12, status:'actual',  psnr:35.1, ssim:0.941, noise: 0.02},
-      {week:24, status:'holdout', psnr:32.8, ssim:0.912, noise: 0.03},
-      {week:34, status:'actual',  psnr:34.6, ssim:0.935, noise:-0.015},
+  { name:'Eye C', code:'eyeC',
+    points:[
+      {week:0.0,  status:'holdout',      psnr:15.4, ssim:0.540, dice:0.75, gtArea:0.19, predArea:0.24},
+      {week:6.0,  status:'interpolated', predArea:0.23},
+      {week:12.0, status:'holdout',      psnr:12.0, ssim:0.555, dice:0.80, gtArea:0.27, predArea:0.23},
+      {week:18.3, status:'interpolated', predArea:0.29},
+      {week:24.6, status:'holdout',      psnr:18.5, ssim:0.598, dice:0.86, gtArea:0.30, predArea:0.32},
+      {week:36.3, status:'interpolated', predArea:0.35},
+      {week:48.0, status:'holdout',      psnr:18.2, ssim:0.498, dice:0.85, gtArea:0.41, predArea:0.39},
+      {week:60.0, status:'extrapolated', predArea:0.42},
+      {week:72.0, status:'extrapolated', predArea:0.47},
+      {week:84.0, status:'extrapolated', predArea:0.50},
     ]},
 ];
 
-function predictedArea(eye, w){ return eye.base + eye.rate * Math.pow(Math.max(w,0), eye.power); }
-function gtAreaAtVisit(eye, visit){ return predictedArea(eye, visit.week) * (1 + visit.noise); }
-function statusAt(eye, w){
-  const vs = eye.visits;
-  for(const v of vs){ if(Math.abs(v.week - w) < 0.3) return v; }
-  if(w <= vs[0].week) return {week:w, status:'actual', synthetic:true};
-  if(w >= vs[vs.length-1].week) return {week:w, status:'extrapolated', synthetic:true};
-  return {week:w, status:'interpolated', synthetic:true};
-}
-function axisMax(eye){ return eye.visits[eye.visits.length-1].week + 24; }
-
-/* ---- Precomputed trig tables: the blob's angle/cos/sin values never
-   change, only its radius does, so we compute them once instead of on
-   every single frame (2 canvases × ~65 points × 2 trig calls, every
-   pointer/drag event, otherwise). ---- */
-const BLOB_N = 64;
-const BLOB_ANGLES = new Float32Array(BLOB_N + 1);
-const BLOB_COS = new Float32Array(BLOB_N + 1);
-const BLOB_SIN = new Float32Array(BLOB_N + 1);
-for(let i=0;i<=BLOB_N;i++){
-  const a = (i/BLOB_N) * Math.PI*2;
-  BLOB_ANGLES[i]=a; BLOB_COS[i]=Math.cos(a); BLOB_SIN[i]=Math.sin(a);
-}
-
-function blobPath(ctx, cx, cy, r, seed){
-  ctx.beginPath();
-  for(let i=0;i<=BLOB_N;i++){
-    const a = BLOB_ANGLES[i];
-    const rr = r * (1 + 0.14*Math.sin(3*a+seed[0]) + 0.07*Math.sin(5*a+seed[1]));
-    const x = cx + rr*BLOB_COS[i], y = cy + rr*BLOB_SIN[i];
-    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-  }
-  ctx.closePath();
-}
-
-/* ---- Static FAF background (gradient + vessel arcs) never depends on
-   the slider position — render it once to an offscreen canvas and just
-   blit it with drawImage every frame instead of rebuilding the gradient
-   and re-stroking 5 arcs on every single pointer move. ---- */
-let fafBackground = null;
-function getFafBackground(size){
-  if(fafBackground) return fafBackground;
-  const off = document.createElement('canvas');
-  off.width = size; off.height = size;
-  const ctx = off.getContext('2d');
-  const cx=size/2, cy=size/2;
-  const g = ctx.createRadialGradient(cx,cy,4,cx,cy,size*0.62);
-  g.addColorStop(0,'#3c4a3f'); g.addColorStop(0.55,'#26332a'); g.addColorStop(1,'#0c1210');
-  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,size*0.48,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='rgba(140,170,150,0.18)'; ctx.lineWidth=1.4;
-  for(let i=0;i<5;i++){
-    ctx.beginPath();
-    const a0 = i*1.3, r0 = size*0.2 + i*7;
-    ctx.arc(cx, cy, r0, a0, a0+2.2);
-    ctx.stroke();
-  }
-  fafBackground = off;
-  return off;
-}
-
-function drawFaf(ctx, size, areaMm2, seed){
-  ctx.clearRect(0,0,size,size);
-  ctx.drawImage(getFafBackground(size), 0, 0);
-  const cx=size/2, cy=size/2;
-  const r = Math.sqrt(areaMm2/Math.PI) * (size*0.052);
-  blobPath(ctx, cx, cy, r*1.32, seed);
-  ctx.strokeStyle='rgba(214,232,150,0.55)'; ctx.lineWidth=3; ctx.stroke();
-  blobPath(ctx, cx, cy, r, seed);
-  ctx.fillStyle='#0a0e0b'; ctx.fill();
-}
-
-function drawSeg(ctx, size, areaMm2, seed){
-  ctx.clearRect(0,0,size,size);
-  ctx.fillStyle='#05070a'; ctx.fillRect(0,0,size,size);
-  const cx=size/2, cy=size/2;
-  const r = Math.sqrt(areaMm2/Math.PI) * (size*0.052);
-  blobPath(ctx, cx, cy, r, seed);
-  ctx.fillStyle='#f4f4f4'; ctx.fill();
-}
-
 let currentEye = EYES[0];
-const cvFaf = document.getElementById('cvFaf'), ctxFaf = cvFaf.getContext('2d');
-const cvSeg = document.getElementById('cvSeg'), ctxSeg = cvSeg.getContext('2d');
+let currentIdx = 0;
 const scrubber = document.getElementById('scrubber');
 const axis = document.getElementById('timelineAxis');
 
 /* Cache DOM lookups once instead of re-querying on every render() call. */
 const dom = {
+  stackFaf: document.getElementById('stackFaf'),
+  stackSeg: document.getElementById('stackSeg'),
+  fafCaption: document.getElementById('fafCaption'),
+  segCaption: document.getElementById('segCaption'),
   badgeDot: document.querySelector('#statusBadge .dot'),
   statusText: document.getElementById('statusText'),
   mWeek: document.getElementById('mWeek'),
   mPredArea: document.getElementById('mPredArea'),
   mPsnr: document.getElementById('mPsnr'),
   mSsim: document.getElementById('mSsim'),
+  mDice: document.getElementById('mDice'),
   mGtArea: document.getElementById('mGtArea'),
-  mNote: document.getElementById('mNote'),
+  mMae: document.getElementById('mMae'),
+  gtToggle: document.getElementById('gtToggle'),
+  gtToggleRow: document.getElementById('gtToggleRow'),
 };
 
-function render(w){
-  const info = statusAt(currentEye, w);
-  const pred = predictedArea(currentEye, w);
-
-  drawFaf(ctxFaf, cvFaf.width, pred, currentEye.seed);
-  drawSeg(ctxSeg, cvSeg.width, pred, currentEye.seed);
-
-  dom.badgeDot.style.background = STATUS_COLOR[info.status];
-  dom.statusText.textContent = STATUS_LABEL[info.status];
-  dom.mWeek.textContent = w.toFixed(1) + ' w';
-  dom.mPredArea.textContent = pred.toFixed(2) + ' mm²';
-
-  if(info.status === 'actual' || info.status === 'holdout'){
-    const visit = currentEye.visits.find(v => Math.abs(v.week-w) < 0.3);
-    if(visit){
-      dom.mPsnr.textContent = visit.psnr.toFixed(1) + ' dB';
-      dom.mSsim.textContent = visit.ssim.toFixed(3);
-      dom.mGtArea.textContent = gtAreaAtVisit(currentEye, visit).toFixed(2) + ' mm²';
-      dom.mNote.textContent = info.status === 'holdout'
-        ? 'Held out from latent fitting entirely — prediction shown is a true generalisation test.'
-        : 'Reconstruction of an observed visit — ground truth available.';
-      return;
-    }
-  }
-  dom.mPsnr.textContent = '—';
-  dom.mSsim.textContent = '—';
-  dom.mGtArea.textContent = 'n/a';
-  dom.mNote.textContent = info.status === 'extrapolated'
-    ? 'Beyond the last observed visit — a genuine forecast, no ground truth exists.'
-    : 'Between two observed visits — no acquisition exists at this timepoint.';
+/* Mount every frame for `eye` as a real <img> in its stack, all at once.
+   Each one starts decoding/painting (opacity:0, but still fully laid out
+   and composited — unlike display:none) as soon as it's inserted, well
+   before the user can scrub to it. render() then never touches `src`
+   again for this eye; it only flips which child is .is-active, which is
+   a compositor-only opacity change with nothing left to decode. */
+function buildFrameStack(container, eye, mod){
+  container.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  eye.points.forEach((p, idx) => {
+    const hasGT = (p.status === 'holdout');
+    const kinds = hasGT ? ['pred', 'gt'] : ['pred'];
+    kinds.forEach(kind => {
+      const img = document.createElement('img');
+      img.src = `./images/trajectory/${eye.code}_${mod}_${kind}_c${idx}.png`;
+      img.alt = '';
+      img.dataset.idx = idx;
+      img.dataset.kind = kind;
+      frag.appendChild(img);
+    });
+  });
+  container.appendChild(frag);
 }
 
-/* rAF-coalesced scrubbing: a drag or touch-move can fire the 'input'
-   event many times per frame. We only ever schedule one render per
-   animation frame, always using the most recent value — extra events
-   in between are free (state overwrite, no work), so the UI never
-   falls behind the pointer even under a flood of input events. */
-let pendingWeek = null, rafScheduled = false;
-function scheduleRender(w){
-  pendingWeek = w;
-  if(rafScheduled) return;
-  rafScheduled = true;
-  requestAnimationFrame(() => { render(pendingWeek); rafScheduled = false; });
+function setActiveFrame(container, idx, kind){
+  container.querySelectorAll('img').forEach(img => {
+    const active = (img.dataset.idx == idx && img.dataset.kind === kind);
+    if(img.classList.contains('is-active') !== active) img.classList.toggle('is-active', active);
+  });
+}
+
+function render(idx){
+  currentIdx = idx;
+  const eye = currentEye;
+  const p = eye.points[idx];
+  const hasGT = (p.status === 'holdout');
+
+  dom.gtToggle.disabled = !hasGT;
+  dom.gtToggleRow.classList.toggle('is-disabled', !hasGT);
+  if(!hasGT) dom.gtToggle.checked = false;
+  const showGT = hasGT && dom.gtToggle.checked;
+  const kind = showGT ? 'gt' : 'pred';
+
+  setActiveFrame(dom.stackFaf, idx, kind);
+  setActiveFrame(dom.stackSeg, idx, kind);
+  dom.fafCaption.textContent = 'Fundus autofluorescence — ' + (showGT ? 'ground truth' : 'predicted');
+  dom.segCaption.textContent = 'GA segmentation — ' + (showGT ? 'ground truth' : 'predicted');
+
+  dom.badgeDot.style.background = STATUS_COLOR[p.status];
+  dom.statusText.textContent = STATUS_LABEL[p.status];
+  dom.mWeek.textContent = p.week.toFixed(1) + ' w';
+  dom.mPredArea.textContent = p.predArea.toFixed(2) + ' mm²';
+
+  if(hasGT){
+    dom.mPsnr.textContent = p.psnr.toFixed(1) + ' dB';
+    dom.mSsim.textContent = p.ssim.toFixed(3);
+    dom.mDice.textContent = p.dice.toFixed(2);
+    dom.mGtArea.textContent = p.gtArea.toFixed(2) + ' mm²';
+    dom.mMae.textContent = Math.abs(p.predArea - p.gtArea).toFixed(2) + ' mm²';
+  } else {
+    dom.mPsnr.textContent = '—';
+    dom.mSsim.textContent = '—';
+    dom.mDice.textContent = '—';
+    dom.mGtArea.textContent = 'n/a';
+    dom.mMae.textContent = '—';
+  }
+}
+
+function axisMax(eye){ return eye.points[eye.points.length - 1].week * 1.04; }
+
+function nearestIndex(eye, w){
+  let bestIdx = 0, bestDiff = Infinity;
+  eye.points.forEach((p, idx) => {
+    const d = Math.abs(p.week - w);
+    if(d < bestDiff){ bestDiff = d; bestIdx = idx; }
+  });
+  return bestIdx;
 }
 
 function buildTimeline(){
   document.querySelectorAll('.timeline-marker').forEach(m => m.remove());
-  const max = axisMax(currentEye);
+  const eye = currentEye;
+  buildFrameStack(dom.stackFaf, eye, 'faf');
+  buildFrameStack(dom.stackSeg, eye, 'seg');
+  const max = axisMax(eye);
   scrubber.max = max;
-  scrubber.value = currentEye.visits[0].week;
+  scrubber.value = 0;
   const frag = document.createDocumentFragment();
-  currentEye.visits.forEach(v => {
-    const pct = (v.week / max) * 100;
+  eye.points.forEach((p, idx) => {
+    const pct = (p.week / max) * 100;
     const m = document.createElement('div');
-    m.className = 'timeline-marker';
+    m.className = 'timeline-marker' + (p.status === 'holdout' ? '' : ' is-minor');
     m.style.left = pct + '%';
-    m.style.background = STATUS_COLOR[v.status];
-    m.innerHTML = `<span class="tt">${v.week}w</span>`;
-    m.addEventListener('click', () => { scrubber.value = v.week; scheduleRender(v.week); });
+    m.style.background = STATUS_COLOR[p.status];
+    m.innerHTML = `<span class="tt">${p.week.toFixed(1)}w</span>`;
+    m.addEventListener('click', () => { scrubber.value = p.week; render(idx); });
     frag.appendChild(m);
   });
   axis.appendChild(frag);
-  render(parseFloat(scrubber.value));
+  render(0);
 }
 
-scrubber.addEventListener('input', () => scheduleRender(parseFloat(scrubber.value)), { passive: true });
+/* A dragged range input can fire 'input' far faster than once per
+   frame. Two things kept this laggy before: (1) forcing scrubber.value
+   back to the snapped week on every single event fights the browser's
+   own thumb rendering, and (2) running the full render() — 2 image
+   swaps, 6 table cells, badge, captions — on every event even when the
+   nearest of the 10 real frames hadn't actually changed. Fix: track
+   position with a free-running rAF-coalesced value, only touch the DOM
+   when the nearest index changes, and only snap the thumb to the exact
+   week once the drag actually ends. */
+let rafScheduled = false, pendingWeek = null;
+function scheduleFromWeek(w){
+  pendingWeek = w;
+  if(rafScheduled) return;
+  rafScheduled = true;
+  requestAnimationFrame(() => {
+    rafScheduled = false;
+    const idx = nearestIndex(currentEye, pendingWeek);
+    if(idx !== currentIdx) render(idx);
+  });
+}
+
+scrubber.addEventListener('input', () => {
+  scheduleFromWeek(parseFloat(scrubber.value));
+}, { passive: true });
+
+scrubber.addEventListener('change', () => {
+  scrubber.value = currentEye.points[currentIdx].week;
+}, { passive: true });
+
+/* Left/Right (and Up/Down) step directly to the previous/next real
+   timepoint instead of the native ±step (0.1 week) nudge, which would
+   take dozens of presses to reach the next frame and could land on a
+   week with no corresponding data. */
+scrubber.addEventListener('keydown', (e) => {
+  let dir = 0;
+  if(e.key === 'ArrowRight' || e.key === 'ArrowUp') dir = 1;
+  else if(e.key === 'ArrowLeft' || e.key === 'ArrowDown') dir = -1;
+  else return;
+  e.preventDefault();
+  const nextIdx = Math.min(currentEye.points.length - 1, Math.max(0, currentIdx + dir));
+  if(nextIdx === currentIdx) return;
+  scrubber.value = currentEye.points[nextIdx].week;
+  render(nextIdx);
+});
+
+dom.gtToggle.addEventListener('change', () => render(currentIdx));
 
 document.getElementById('eyeSelect').addEventListener('click', (e)=>{
   const btn = e.target.closest('.method-pill'); if(!btn) return;
@@ -790,22 +917,35 @@ buildTimeline();
    Compare slider (prediction vs. ground truth), used in the
    "Held-out reconstruction" section for both FAF and segmentation.
 
-   Every drag only ever touches one CSS custom property, --reveal, on
-   the .compare-slider element. Both the clip-path on the prediction
-   layer and the handle's position read from that single variable via
-   calc() in CSS, so one JS write updates both — no separate style
-   writes to fight over, and both effects (clip-path, transform) are
-   compositor-only: dragging never triggers layout or repaints the
-   underlying images.
+   Dragging is bound directly to the whole image (.compare-frame), not
+   just the thin native range control beneath it, via Pointer Events
+   with pointer capture — so a drag started anywhere on the image keeps
+   tracking even if the pointer leaves the frame mid-gesture. Each
+   slider has an orientation ("h" or "v", toggled by its own button):
+   horizontal reveal reads the pointer's X position, vertical reveal
+   reads its Y position, so the same control genuinely works dragging
+   either horizontally or vertically, not just left-right.
 
-   Like the temporal scrubber, rapid pointer/touch events are coalesced
-   into at most one write per animation frame.
+   Every update writes only the --reveal custom property; both the
+   clip-path on the prediction layer and the handle's position read
+   from that single variable via calc() in CSS, so one JS write updates
+   both — no separate style writes to fight over, and both effects
+   (clip-path, transform) are compositor-only: dragging never triggers
+   layout or repaints of the underlying images.
+
+   Rapid pointer/touch events are coalesced into at most one write per
+   animation frame, same as the temporal scrubber above.
    =================================================================== */
 function initCompareSlider(root){
   const range = root.querySelector('.compare-range');
+  const frame = root.querySelector('.compare-frame');
+  const toggle = root.querySelector('.orientation-toggle');
   let pending = null, scheduled = false;
+
   function apply(v){
+    v = Math.max(0, Math.min(100, v));
     pending = v;
+    if(parseFloat(range.value) !== v) range.value = v;
     if(scheduled) return;
     scheduled = true;
     requestAnimationFrame(() => {
@@ -813,20 +953,75 @@ function initCompareSlider(root){
       scheduled = false;
     });
   }
-  range.addEventListener('input', () => apply(range.value), { passive: true });
-  apply(range.value);
+
+  function revealFromPointer(e){
+    const rect = frame.getBoundingClientRect();
+    if(root.dataset.orientation === 'v'){
+      return ((e.clientY - rect.top) / rect.height) * 100;
+    }
+    return ((e.clientX - rect.left) / rect.width) * 100;
+  }
+
+  let dragging = false;
+  frame.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    frame.setPointerCapture(e.pointerId);
+    apply(revealFromPointer(e));
+  });
+  frame.addEventListener('pointermove', (e) => {
+    if(!dragging) return;
+    apply(revealFromPointer(e));
+  });
+  frame.addEventListener('pointerup', () => { dragging = false; });
+  frame.addEventListener('pointercancel', () => { dragging = false; });
+
+  range.addEventListener('input', () => apply(parseFloat(range.value)), { passive: true });
+
+  if(toggle){
+    toggle.addEventListener('click', () => {
+      const next = root.dataset.orientation === 'v' ? 'h' : 'v';
+      root.dataset.orientation = next;
+      toggle.textContent = next === 'v' ? '⇕ Vertical' : '⇔ Horizontal';
+    });
+  }
+
+  apply(parseFloat(range.value));
 }
 document.querySelectorAll('.compare-slider').forEach(initCompareSlider);
 
-/* Figure 2 method-pill switcher: only the prediction layer changes —
-   ground truth is the same acquisition regardless of method. */
-document.getElementById('fig2Methods').addEventListener('click', (e)=>{
+/* Figure 2 scenario switcher: swaps the prediction layer (ground truth
+   is the same image in both, since both scenarios predict Eye A's same
+   last visit) and the readout metrics. Scenario 1 uses the single-pair
+   fit whose input is the very FIRST visit (V1→V4) — the largest possible
+   time gap and the fewest visits given, so it's the clearest illustration
+   of what the extra visits in Scenario 2's full history (V1,V2,V3→V4)
+   buy the model on the exact same target. */
+const FIG2_SCENARIOS = {
+  single: {
+    faf: { gt: './images/trajectory/eyeB_faf_gt_c6.png', pred: './images/trajectory/eyeB_faf_pred_c6_s1.png' },
+    seg: { gt: './images/trajectory/eyeB_seg_gt_c6.png', pred: './images/trajectory/eyeB_seg_pred_c6_s1.png' },
+    desc: 'Only the very first visit is given as input to predict the last one.',
+    metrics: 'PSNR 16.7 dB · DICE 0.59 · Lesion-area MAE 0.39 mm²',
+  },
+  history: {
+    faf: { gt: './images/trajectory/eyeB_faf_gt_c6.png', pred: './images/trajectory/eyeB_faf_pred_c6_s2.png' },
+    seg: { gt: './images/trajectory/eyeB_seg_gt_c6.png', pred: './images/trajectory/eyeB_seg_pred_c6_s2.png' },
+    desc: "The eye's entire prior visit history (all three preceding visits) is given as input to predict the same last visit.",
+    metrics: 'PSNR 18.5 dB · DICE 0.82 · Lesion-area MAE 0.02 mm²',
+  },
+};
+
+document.getElementById('fig2Scenario').addEventListener('click', (e)=>{
   const btn = e.target.closest('.method-pill'); if(!btn) return;
-  document.querySelectorAll('#fig2Methods .method-pill').forEach(p=>p.classList.remove('is-active'));
+  document.querySelectorAll('#fig2Scenario .method-pill').forEach(p=>p.classList.remove('is-active'));
   btn.classList.add('is-active');
-  const m = btn.dataset.method;
-  document.querySelector('#fig2faf .compare-pred').src = `./images/figure2_${m}_faf.png`;
-  document.querySelector('#fig2seg .compare-pred').src = `./images/figure2_${m}_seg.png`;
+  const s = FIG2_SCENARIOS[btn.dataset.scenario];
+  document.getElementById('fig2fafGt').src = s.faf.gt;
+  document.getElementById('fig2fafPred').src = s.faf.pred;
+  document.getElementById('fig2segGt').src = s.seg.gt;
+  document.getElementById('fig2segPred').src = s.seg.pred;
+  document.getElementById('fig2ScenarioDesc').textContent = s.desc;
+  document.getElementById('fig2Metrics').textContent = s.metrics;
 });
 
 /* Missing-image graceful fallback, for both plain figure slots and the
