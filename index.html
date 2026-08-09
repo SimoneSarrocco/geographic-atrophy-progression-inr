@@ -23,8 +23,31 @@
   </script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
           integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05"
-          crossorigin="anonymous"
-          onload="renderMathInElement(document.body);">
+          crossorigin="anonymous">
+  </script>
+  <script>
+    // auto-render must be told which delimiters to look for. Its defaults cover $$...$$, \(...\),
+    // \[...\] and \begin{}...\end{} but NOT single $...$, which is what the figure captions use, so
+    // without this list their maths is left on the page as raw LaTeX source.
+    // $$ has to come before $ or the scanner reads "$$" as two empty $...$ spans.
+    // Deferred scripts finish executing before DOMContentLoaded, so renderMathInElement is defined
+    // by the time this runs.
+    document.addEventListener('DOMContentLoaded', function () {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$',  right: '$$',  display: true},
+          {left: '\\[', right: '\\]', display: true},
+          {left: '$',   right: '$',   display: false},
+          {left: '\\(', right: '\\)', display: false}
+        ],
+        // Leave code and scripts alone: the trajectory viewer builds paths with JS template
+        // literals (`${...}`), which must not be parsed as maths.
+        ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option'],
+        // Render what it can and leave a bad expression visible, rather than throwing and losing
+        // the rest of the caption.
+        throwOnError: false
+      });
+    });
   </script>
 
   <style>
