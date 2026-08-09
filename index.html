@@ -435,18 +435,20 @@
       </div>
 
       <p class="is-size-5 mt-3">
-        Our proposed model architecture. In the training phase (a), a spatial coordinate
-        \(\mathbf{x}\in\mathbb{R}^2\)
-        is fed into the MLP. Each layer of the MLP is conditioned by concatenating the latent vector
-        \(z_i\) and the time variables
-        via modulation. The INR outputs both the pixel intensity value
-        \(\hat{I}_i(\mathbf{x})\) and the GA segmentation label
-        \(\hat{S}_i(\mathbf{x})\).
-        During test-time optimisation (b), a new latent vector
-        \(z_k\) is used for a new eye
-        \(k\) and optimised across both FAF images
-        and GA segmentations, while keeping the INR parameters frozen. By concatenating the new optimised latent vector
-        with the time-conditioning variables, the forward pass generates the new FAF image and GA segmentation at the specified time.
+          Our proposed model architecture. In the training phase (a), a spatial coordinate $\mathbf{x}\in\mathbb{R}^2$
+          is fed into the MLP. Each layer of the MLP is conditioned by concatenating the latent vector $z_i$, the time
+          in weeks from the baseline visit, $t$, and the age of the patient at $t$, $\text{age}_t$, via modulation.
+          The shared INR is split into reconstruction head $f_\theta^{\text{faf}}$, which outputs the pixel intensity
+          value $\hat{I}_i(\mathbf{x})$ (purple cross in the output FAF), and the segmentation head $f_\theta^{\text{seg}}$,
+          which takes the outputs from the last two hidden layers and outputs the GA segmentation label $\hat{S}_i(\mathbf{x})$
+          (purple point in the output segmentation). The predictions are compared to the ground truth $I_i(\mathbf{x})$
+          (red cross in the input FAF) and $S_i(\mathbf{x})$ (red point in the input segmentation), respectively, using
+          a combination of MSE ($\mathcal{L}_{\text{MSE}}$, for FAF reconstruction) and sum of DICE and Binary Cross
+          Entropy ($\mathcal{L}_\text{SEG}$, for GA segmentation) as loss function. During test-time optimisation (b),
+          a new latent vector $z_k$ for a new eye $k$ is randomly sampled from $\mathcal{N}(0,10^{-2})$ and optimised
+          across both FAF images and GA segmentations using the same loss function, while keeping the INR parameters
+          frozen. By concatenating the new optimised latent vector with the time-conditioning variables, the forward
+          pass generates the new FAF image and GA segmentation at the specified time.
       </p>
     </div>
   </section>
