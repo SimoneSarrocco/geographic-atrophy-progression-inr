@@ -615,7 +615,7 @@
 
       <div class="columns is-centered">
         <div class="column is-five-sixths">
-          <div class="img-slot" data-placeholder="Figure4.png&#10;&#10;small-multiples grid, one panel per test eye">
+          <div class="img-slot" data-placeholder="Figure4_new.png&#10;&#10;small-multiples grid, one panel per test eye">
             <img class="framed-image" src="./images/Figure4.png" alt="Grid of per-eye lesion area scatter plots">
           </div>
         </div>
@@ -624,9 +624,9 @@
       <div class="columns is-centered mt-3">
         <div class="column is-four-fifths">
           <p class="is-size-5 has-text-centered">
-            One scatter panel per test eye: ground-truth lesion area at each real visit against GAP-INR's
-            predicted trajectory, alongside copy-forward, linear interpolation/extrapolation, and cubic
-            B-spline fits.
+            Longitudinal analysis of the individual lesion area trajectories. The six subject-specific predicted
+              trajectories are compared with linear extrapolation, cubic B-spline extrapolation, and copy-forward.
+              Linear and cubic B-spline extrapolation curves are fitted using all ground truth visits.
           </p>
         </div>
       </div>
@@ -634,7 +634,7 @@
       <div class="columns is-centered">
         <div class="column is-four-fifths">
           <div class="callout-box">
-            <b>Why monotonicity matters.</b> GA is anatomically irreversible — once tissue atrophies, the lesion
+            <b>Why monotonicity matters.</b> GA is anatomically irreversible: once tissue atrophies, the lesion
             does not shrink. Curve fits like linear or cubic B-spline have no mechanism to enforce this and can
             predict area decreasing between visits; a faithful model's predicted trajectory should stay
             non-decreasing along each eye's own timeline, not just accurate at the sampled points.
@@ -657,10 +657,10 @@
       </div>
 
       <p class="is-size-5 mt-3">
-        The per-eye latent is a grid of shape (channels, H, W). Too coarse and the shared decoder cannot carry
-        enough per-eye detail; too large and the latent risks memorising rather than generalising across visits.
-        The heatmap reports held-out performance across the sweep of channel count (rows) and spatial grid size
-        (columns); see the paper for exact values and the metric definition used.
+        Latent-grid ablation over number of channels $C$ (rows) and spatial resolution $H\!=\!W$ (columns).
+          Each cell reports a metric at the checkpoint with the best DICE&thinsp;+&thinsp;lesion-area-MAE trade-off
+          (<em>lighter is better</em>). The red box is the best configuration ($C{=}256$, $H{=}W{=}32$)
+          by subjective judgment over all five metrics.
       </p>
     </div>
   </section>
